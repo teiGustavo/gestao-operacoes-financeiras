@@ -84,6 +84,15 @@ pode ser encontrado no arquivo:
 
 ---
 
+## ⚖️ Decisões Técnicas e Justificativas
+
+As decisões técnicas tomadas durante o desenvolvimento do projeto,
+bem como as justificativas para escolhas importantes,
+podem ser encontradas no arquivo:
+[Justificativa Técnica e Embasamento das Decisões](./justificativa-e-embasamento.md).
+
+---
+
 ## 🎯 Critérios de Avaliação
 
 O teste será avaliado principalmente nos seguintes aspectos:

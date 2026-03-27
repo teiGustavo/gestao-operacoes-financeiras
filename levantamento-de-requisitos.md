@@ -258,9 +258,9 @@ $$
 
 **Critérios:**
 - PHP 8 ou superior
-- Laravel 12
+- Laravel 12 ou superior
 - MySQL
-- JavaScript (ES6+)
+- JavaScript
 - Bootstrap ou equivalente
 - Compatível com ambientes Xampp, Docker ou equivalentes
 
@@ -283,13 +283,3 @@ $$
 2. **Campos Gerados:** Campos não presentes na planilha devem ser gerados automaticamente pelo sistema conforme regras de negócio
 3. **Intervalo de Parcelas:** Cada parcela deve ter intervalo de 1 mês (30 dias) em relação à parcela anterior
 4. **Tolerância de Cálculo:** Caso os valores de Valor Presente não coincidam exatamente, não há problema; o objetivo é validar a estrutura e implementação do cálculo
-
----
-
-## 🛠️ Stack Mínima Requerida
-
-- **Aplicação/Backend:** PHP 8 / Laravel 12
-- **Frontend:** JavaScript + Bootstrap (ou equivalente)
-- **Banco de Dados:** MySQL
-- **Ambiente:** Xampp, Docker ou equivalente
-

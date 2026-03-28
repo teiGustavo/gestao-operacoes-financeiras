@@ -9,6 +9,9 @@ a implementação do projeto.
 
 Para mais detalhes sobre o projeto, consulte o [README.md](../README.md).
 
+Para visualizar os dados iniciais, consulte a 
+[Planilha Teste Prático - Dimensa](./Arquivos%20do%20Teste/Planilha%20Teste%20Pratico%20-%20Dimensa%20(27-03).xlsx).
+
 ---
 
 ### 🔵 Requisitos Funcionais
@@ -151,15 +154,17 @@ $$
 #### RF05 - Análise de Operação (Detalhes e Alteração de Status)
 **Descrição:** O sistema deve permitir visualizar detalhes de uma operação e atualizar seu status conforme regras de negócio.
 
-**Status Possíveis (fluxo sequencial):**
-1. DIGITANDO
-2. PRÉ-ANÁLISE
-3. EM ANÁLISE
-4. PARA ASSINATURA
-5. ASSINATURA CONCLUÍDA
-6. APROVADA
-7. CANCELADA
-8. PAGO AO CLIENTE
+##### Status Possíveis (fluxo sequencial):
+1. `DIGITANDO`: Início do fluxo, quando a proposta é criada
+2. `PRÉ-ANÁLISE`: Fase de validação inicial e coleta de informações
+3. `EM ANÁLISE`: Fase de avaliação detalhada da proposta
+4. `PARA ASSINATURA`: Fase em que a proposta está aguardando a assinatura do cliente
+5. `ASSINATURA CONCLUÍDA`: Fase em que a assinatura do cliente foi concluída
+6. `APROVADA`: Fase em que a proposta foi aprovada e está pronta para pagamento
+7. `CANCELADA`: Fase em que a proposta foi cancelada, seja por decisão do cliente ou por
+   regras de negócio
+8. `PAGO AO CLIENTE`: Fase final do fluxo, em que o dinheiro foi efetivamente 
+   enviado ao cliente
 
 **Critérios de Aceitação:**
 - Permitir acesso ao detalhe de uma operação a partir da listagem
@@ -179,6 +184,12 @@ $$
 3. Toda alteração de status deve:
     - Ser registrada em log/histórico
     - Incluir: usuário responsável, data/hora, status anterior e novo status
+
+##### Tipos de Produto:
+- **Consignado:** Produto com desconto em folha de pagamento, 
+  geralmente para servidores públicos ou aposentados.
+- **Não Consignado:** Produto sem desconto em folha, 
+  geralmente para trabalhadores do setor privado ou autônomos.
 
 #### RF06 - Histórico de Alterações
 **Descrição:** O sistema deve manter registro de todas as alterações de status das operações.

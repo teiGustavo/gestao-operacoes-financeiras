@@ -5,21 +5,56 @@ durante o desenvolvimento do projeto.
 
 Para mais detalhes sobre o projeto, consulte o [README.md](../README.md).
 
+Para visualizar os dados iniciais, consulte a
+[Planilha Teste Prático - Dimensa](./Arquivos%20do%20Teste/Planilha%20Teste%20Pratico%20-%20Dimensa%20(27-03).xlsx).
+
 ---
 
 ## Escolhas Gerais
 
-`PHP 8.5`: Foi escolhido pelas recentes melhorias na linguagem, segurança aprimorada, pipe operator `|>` e por ser a versão mais nova lançada. 
+#### PHP 8.5: 
+Foi escolhido pelas recentes melhorias na linguagem, segurança aprimorada, pipe operator `|>` e por ser a versão mais nova lançada. 
 Mesmo sendo a versão estável mais nova, ela já tem um tempo considerável de maturidade,
 pois foi lançada em Novembro/2025 e já possui patches de correção
 (o que a comunidade gosta de esperar antes de adotar uma nova versão).
 
-`Filament`: Escolhido para o otimizar o tempo e focar em performance/modelagem.
+#### Filament: 
+Escolhido para o otimizar o tempo e focar em performance/modelagem.
 
-`Tailwind CSS`: Para possibilitar o desenvolvimento mais otimizado e `mobile-first` 
+#### Tailwind CSS:
+Para possibilitar o desenvolvimento mais otimizado e `mobile-first` 
 (o `Bootstrap` também permite, mas não tem o mesmo objetivo, 
 tendo foco principal em components `copy & use`).
 
+#### Arquitetura: 
+Mesmo que o Laravel tenha uma estrutura rígida de pastas,
+o projeto foi organizado visando o desacoplamento, a manutenibilidade e a escalabilidade,
+seguindo os princípios da `Clean Architecture` e alguns princípios
+extraídos do `Domain-Driven Design` (como imutabilidade, objetos de valor e 
+entidades de domínio / domínio rico).
+
+#### Filosofia das Movimentações/Operações: 
+Em um cenário real,
+as movimentações/operacões financeiras são tratadas como eventos imutáveis, ou seja,
+uma vez que uma movimentação é registrada, ela não deve ser alterada,
+mas sim, criar uma nova movimentação para refletir qualquer mudança ou correção necessária.
+Por exemplo:
+- Um saldo em uma conta bancária é atualizado por meio de movimentações,
+onde o saldo é calculado a partir do histórico de movimentações, não sendo apenas
+um campo atualizado diretamente 
+(o que torna o saldo completamente auditável e rastreável).
+- Um cancelamento ou estorno de uma operação financeira é registrado 
+como uma nova movimentação, em vez de alterar a movimentação original,
+o que mantém a integridade do histórico financeiro e permite uma trilha de auditoria clara.
+
+Como o teste não especifica a necessidade de modificar os dados das operações
+(somente seu status),
+as operações serão consideradas imutáveis, mas não será implementada uma lógica 
+de movimentações incrementais 
+(pois seria necessária uma política de audit/sanit check).
+
+
+#### Arredondamento:
 Quando for necessário algum arredondamento, será adotado o `Arredondamento Bancário`
 (_Regra do Par_ / _Round Half to Even_) descrito na norma **NBR 5891:2014** e
 **Anexo B da ISO 80000-1**.

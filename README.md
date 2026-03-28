@@ -107,6 +107,14 @@ podem ser encontradas no arquivo:
 
 ---
 
+## 📐 Modelagem do Banco de Dados
+
+A modelagem do banco de dados, incluindo as principais entidades, 
+seus atributos e os relacionamentos entre elas, pode ser encontrada no arquivo:
+[Modelagem do Banco de Dados](docs/modelagem.md).
+
+---
+
 ## 🎯 Critérios de Avaliação
 
 O teste será avaliado principalmente nos seguintes aspectos:

@@ -1,6 +1,15 @@
 # Levantamento de Requisitos
 
-Para mais detalhes sobre o repositório, consulte o [README.md](./README.md).
+Este é um levantamento de requisitos construído com base no 
+PDF de descrição do teste técnico.
+
+Nota-se que nem todos os detalhes estão presentes no PDF, 
+então algumas suposições foram feitas por mim, para nortear e embasar
+a implementação do projeto.
+
+> Os requisitos foram extraídos e expandidos)
+
+Para mais detalhes sobre o projeto, consulte o [README.md](./README.md).
 
 ---
 
@@ -133,7 +142,6 @@ $$
 & \mathrm{d}  = \text{Dias (atraso/adiantamento)} &
 \end{flalign*}
 $$
-
 
 **Regras do Relatório:**
 - Deve respeitar os filtros aplicados na tela

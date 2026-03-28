@@ -13,6 +13,20 @@ Este projeto foi desenvolvido como parte de um processo seletivo para a vaga de
 
 Descrição da Vaga: [Pessoa Analista de Desenvolvimento PHP Laravel Júnior - Dimensa](https://www.linkedin.com/jobs/view/4375245140)
 
+Descrição do Teste Técnico: [Teste Técnico - Analista I de Desenvolvimento de Software - Dimensa](./docs/Arquivos%20do%20Teste/Processo%20seletivo%20-%20Dev%20I.docx.pdf).
+
+---
+
+## 🏗️ Estrutura do Repositório
+
+Além das pastas comuns do Laravel, o repositório inclui:
+
+- `docker/`: Configurações e arquivos relacionados ao Docker
+- `docs/`: Documentação do projeto (levantamento de requisitos, justificativas técnicas, etc.)
+- `Makefile`: Script para facilitar a configuração do ambiente
+- `mise.toml`: Configurações do gerenciador de versões `Mise`
+- `README.md`: Documentação principal do projeto
+
 ---
 
 ## 🎯 Objetivos do Sistema
@@ -80,7 +94,7 @@ Equivalência dos comandos `Makefile` para se caso o `make` não estiver dispon�
 O levantamento de requisitos detalhado
 (incluindo requisitos funcionais e não funcionais) 
 pode ser encontrado no arquivo:
-[Levantamento de Requisitos](./levantamento-de-requisitos.md).
+[Levantamento de Requisitos](docs/levantamento-de-requisitos.md).
 
 ---
 
@@ -89,7 +103,7 @@ pode ser encontrado no arquivo:
 As decisões técnicas tomadas durante o desenvolvimento do projeto,
 bem como as justificativas para escolhas importantes,
 podem ser encontradas no arquivo:
-[Justificativa Técnica e Embasamento das Decisões](./justificativa-e-embasamento.md).
+[Justificativa Técnica e Embasamento das Decisões](docs/justificativa-e-embasamento.md).
 
 ---
 

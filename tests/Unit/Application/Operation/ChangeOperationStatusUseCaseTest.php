@@ -14,9 +14,11 @@ use Tests\Support\InMemoryOperationRepository;
 use Tests\Support\InMemoryOperationStatusHistoryRepository;
 
 it('returns not found when operation does not exist', function () {
+    $historyRepository = new InMemoryOperationStatusHistoryRepository;
+
     $useCase = new ChangeOperationStatusUseCase(
         operationRepository: new InMemoryOperationRepository,
-        operationStatusHistoryRepository: new InMemoryOperationStatusHistoryRepository,
+        operationStatusHistoryRepository: $historyRepository,
         operationLifecycleService: new OperationLifecycleService,
     );
 
@@ -29,7 +31,9 @@ it('returns not found when operation does not exist', function () {
     ));
 
     expect($result->isFailure())->toBeTrue()
-        ->and($result->firstError()?->code)->toBe(ErrorCode::OperationNotFound);
+        ->and($result->firstError()?->code)->toBe(ErrorCode::OperationNotFound)
+        ->and($historyRepository->listByOperationId(999))->toBeEmpty();
+
 });
 
 it('changes status and appends history when transition is valid', function () {
@@ -78,5 +82,53 @@ it('changes status and appends history when transition is valid', function () {
 
     expect($history)->toHaveCount(1)
         ->and($history[0]->previousStatus)->toBe(OperationStatus::APPROVED)
-        ->and($history[0]->newStatus)->toBe(OperationStatus::DISBURSED);
+        ->and($history[0]->newStatus)->toBe(OperationStatus::DISBURSED)
+        ->and($history[0]->changedByUserId)->toBe(17)
+        ->and($history[0]->notes)->toBe('Pagamento concluido')
+        ->and($history[0]->changedAt)->toBeInstanceOf(DateTimeImmutable::class)
+        ->and($history[0]->changedAt->getTimestamp())->toBeGreaterThanOrEqual(time() - 5);
+});
+
+it('does not append history when transition is invalid', function () {
+    $operationRepository = new InMemoryOperationRepository;
+    $historyRepository = new InMemoryOperationStatusHistoryRepository;
+    $lifecycleService = new OperationLifecycleService;
+
+    $registerUseCase = new RegisterOperationUseCase($operationRepository, $lifecycleService);
+
+    $registerResult = $registerUseCase->execute(new RegisterOperationInput(
+        clientId: 1,
+        agreementId: 1,
+        requestedValue: 1000,
+        disbursementValue: 950,
+        totalInterest: 50,
+        lateFeeRate: 2,
+        lateInterestRate: 1,
+        installmentsCount: 10,
+        paidInstallmentsCount: 0,
+        installmentValue: 105,
+        status: OperationStatus::DRAFT,
+        productType: ProductType::PAYROLL_LOAN,
+        firstDueDate: '2026-06-01',
+        proposalCreatedDate: '2026-05-01',
+        paymentDate: null,
+    ));
+
+    $useCase = new ChangeOperationStatusUseCase(
+        operationRepository: $operationRepository,
+        operationStatusHistoryRepository: $historyRepository,
+        operationLifecycleService: $lifecycleService,
+    );
+
+    $result = $useCase->execute(new ChangeOperationStatusInput(
+        operationId: $registerResult->value()->id,
+        newStatus: OperationStatus::APPROVED,
+        changedByUserId: 17,
+        notes: 'Tentativa invalida',
+        paymentDate: null,
+    ));
+
+    expect($result->isFailure())->toBeTrue()
+        ->and($result->firstError()?->code)->toBe(ErrorCode::OperationStatusTransitionInvalid)
+        ->and($historyRepository->listByOperationId($registerResult->value()->id))->toBeEmpty();
 });

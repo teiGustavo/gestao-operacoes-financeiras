@@ -11,14 +11,14 @@ use App\Infrastructure\Exceptions\InfrastructureUnavailableException;
 use App\Infrastructure\Repositories\Mappers\Client\ClientDataMapper;
 use App\Models\Client as ClientModel;
 use Illuminate\Database\QueryException;
+use Throwable;
 
 final readonly class ClientEloquentRepository implements ClientRepositoryInterface
 {
     public function __construct(
         private ClientModel $clientModel,
         private ClientDataMapper $clientDataMapper,
-    ) {
-    }
+    ) {}
 
     public function findById(int $clientId): ?Client
     {
@@ -31,7 +31,7 @@ final readonly class ClientEloquentRepository implements ClientRepositoryInterfa
 
             return $this->mapModelToDomain($model);
         } catch (QueryException $queryException) {
-            throw new InfrastructureUnavailableException('Nao foi possivel consultar cliente por id.', 0, $queryException);
+            throw new InfrastructureUnavailableException('Could not retrieve client by id.', 0, $queryException);
         }
     }
 
@@ -48,7 +48,7 @@ final readonly class ClientEloquentRepository implements ClientRepositoryInterfa
 
             return $this->mapModelToDomain($model);
         } catch (QueryException $queryException) {
-            throw new InfrastructureUnavailableException('Nao foi possivel consultar cliente por cpf.', 0, $queryException);
+            throw new InfrastructureUnavailableException('Could not retrieve client by cpf.', 0, $queryException);
         }
     }
 
@@ -65,7 +65,7 @@ final readonly class ClientEloquentRepository implements ClientRepositoryInterfa
 
             return $this->mapModelToDomain($model);
         } catch (QueryException $queryException) {
-            throw new InfrastructureUnavailableException('Nao foi possivel consultar cliente por email.', 0, $queryException);
+            throw new InfrastructureUnavailableException('Could not retrieve client by email.', 0, $queryException);
         }
     }
 
@@ -80,7 +80,7 @@ final readonly class ClientEloquentRepository implements ClientRepositoryInterfa
 
             return $query->exists();
         } catch (QueryException $queryException) {
-            throw new InfrastructureUnavailableException('Nao foi possivel verificar cpf de cliente.', 0, $queryException);
+            throw new InfrastructureUnavailableException("Unable to verify the client's CPF.", 0, $queryException);
         }
     }
 
@@ -95,7 +95,7 @@ final readonly class ClientEloquentRepository implements ClientRepositoryInterfa
 
             return $query->exists();
         } catch (QueryException $queryException) {
-            throw new InfrastructureUnavailableException('Nao foi possivel verificar email de cliente.', 0, $queryException);
+            throw new InfrastructureUnavailableException("Unable to verify the client's email.", 0, $queryException);
         }
     }
 
@@ -103,10 +103,6 @@ final readonly class ClientEloquentRepository implements ClientRepositoryInterfa
     {
         try {
             $clientData = $this->clientDataMapper->toPersistence($client);
-
-            if (! $clientData instanceof ClientData) {
-                throw new InfrastructureUnavailableException('Mapper de client retornou payload invalido.');
-            }
 
             $model = $clientData->id === null
                 ? $this->clientModel->newInstance()
@@ -123,12 +119,12 @@ final readonly class ClientEloquentRepository implements ClientRepositoryInterfa
             $model->save();
 
             return $this->mapModelToDomain($model);
-        } catch (\Throwable $throwable) {
+        } catch (Throwable $throwable) {
             if ($throwable instanceof InfrastructureUnavailableException) {
                 throw $throwable;
             }
 
-            throw new InfrastructureUnavailableException('Nao foi possivel persistir cliente.', 0, $throwable);
+            throw new InfrastructureUnavailableException('Could not save client.', 0, $throwable);
         }
     }
 
@@ -143,13 +139,6 @@ final readonly class ClientEloquentRepository implements ClientRepositoryInterfa
             email: (string) $clientModel->email,
         );
 
-        $mappedClient = $this->clientDataMapper->toDomain($clientData);
-
-        if (! $mappedClient instanceof Client) {
-            throw new InfrastructureUnavailableException('Mapper de client retornou entidade invalida.');
-        }
-
-        return $mappedClient;
+        return $this->clientDataMapper->toDomain($clientData);
     }
 }
-

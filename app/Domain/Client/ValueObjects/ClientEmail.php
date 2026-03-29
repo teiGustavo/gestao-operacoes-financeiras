@@ -5,13 +5,12 @@ declare(strict_types=1);
 namespace App\Domain\Client\ValueObjects;
 
 use App\Domain\Shared\Result\DomainError;
+use App\Domain\Shared\Result\ErrorCode;
 use App\Domain\Shared\Result\Result;
 
 final readonly class ClientEmail
 {
-    private function __construct(private string $value)
-    {
-    }
+    private function __construct(private string $value) {}
 
     /**
      * @return Result<self>
@@ -22,7 +21,7 @@ final readonly class ClientEmail
 
         if (! filter_var($normalizedEmail, FILTER_VALIDATE_EMAIL)) {
             return Result::failure(new DomainError(
-                code: 'CLIENT_EMAIL_INVALID',
+                code: ErrorCode::ClientEmailInvalid,
                 message: 'E-mail informado e invalido.',
                 context: ['email' => $rawEmail],
             ));
@@ -36,4 +35,3 @@ final readonly class ClientEmail
         return $this->value;
     }
 }
-

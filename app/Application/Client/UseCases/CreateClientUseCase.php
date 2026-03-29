@@ -15,8 +15,7 @@ final readonly class CreateClientUseCase
     public function __construct(
         private ClientRepositoryInterface $clientRepository,
         private ClientRulesService $clientRulesService,
-    ) {
-    }
+    ) {}
 
     /**
      * @return Result<CreateClientOutput>
@@ -41,4 +40,3 @@ final readonly class CreateClientUseCase
         return Result::success(CreateClientOutput::fromClient($savedClient));
     }
 }
-

@@ -21,24 +21,14 @@ final class InMemoryClientRepository implements ClientRepositoryInterface
 
     public function findByCpf(string $cpf): ?Client
     {
-        foreach ($this->clients as $client) {
-            if ($client->cpf->value() === $cpf) {
-                return $client;
-            }
-        }
+        return array_find($this->clients, fn ($client) => $client->cpf->value() === $cpf);
 
-        return null;
     }
 
     public function findByEmail(string $email): ?Client
     {
-        foreach ($this->clients as $client) {
-            if ($client->email->value() === $email) {
-                return $client;
-            }
-        }
+        return array_find($this->clients, fn ($client) => $client->email->value() === $email);
 
-        return null;
     }
 
     public function existsByCpf(string $cpf, ?int $ignoreClientId = null): bool
@@ -80,4 +70,3 @@ final class InMemoryClientRepository implements ClientRepositoryInterface
         return $persistedClient;
     }
 }
-

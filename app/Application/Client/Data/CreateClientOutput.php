@@ -16,8 +16,7 @@ final readonly class CreateClientOutput
         public string $birthDate,
         public ClientGender $gender,
         public string $email,
-    ) {
-    }
+    ) {}
 
     public static function fromClient(Client $client): self
     {
@@ -31,4 +30,3 @@ final readonly class CreateClientOutput
         );
     }
 }
-

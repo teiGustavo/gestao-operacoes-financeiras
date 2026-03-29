@@ -5,13 +5,12 @@ declare(strict_types=1);
 namespace App\Domain\Client\ValueObjects;
 
 use App\Domain\Shared\Result\DomainError;
+use App\Domain\Shared\Result\ErrorCode;
 use App\Domain\Shared\Result\Result;
 
 final readonly class ClientCpf
 {
-    private function __construct(private string $value)
-    {
-    }
+    private function __construct(private string $value) {}
 
     /**
      * @return Result<self>
@@ -22,7 +21,7 @@ final readonly class ClientCpf
 
         if (strlen($digitsOnlyCpf) !== 11) {
             return Result::failure(new DomainError(
-                code: 'CLIENT_CPF_INVALID',
+                code: ErrorCode::ClientCpfInvalid,
                 message: 'CPF deve conter 11 digitos.',
                 context: ['cpf' => $rawCpf],
             ));
@@ -47,4 +46,3 @@ final readonly class ClientCpf
         );
     }
 }
-

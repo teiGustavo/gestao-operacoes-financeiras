@@ -15,7 +15,5 @@ final class ClientData extends Data
         public string $birthDate,
         public string $gender,
         public string $email,
-    ) {
-    }
+    ) {}
 }
-

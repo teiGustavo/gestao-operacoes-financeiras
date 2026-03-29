@@ -4,33 +4,19 @@ declare(strict_types=1);
 
 namespace App\Domain\Client\Contracts\Repositories;
 
+use App\Domain\Client\Entities\Client;
+
 interface ClientRepositoryInterface
 {
-    public function findById(int $clientId): ?array;
+    public function findById(int $clientId): ?Client;
 
-    public function findByCpf(string $cpf): ?array;
+    public function findByCpf(string $cpf): ?Client;
 
-    public function findByEmail(string $email): ?array;
+    public function findByEmail(string $email): ?Client;
 
-    /**
-     * @param array{
-     *     id?: int,
-     *     name: string,
-     *     cpf: string,
-     *     birth_date: string,
-     *     gender: string,
-     *     email: string
-     * } $clientPayload
-     *
-     * @return array{
-     *     id: int,
-     *     name: string,
-     *     cpf: string,
-     *     birth_date: string,
-     *     gender: string,
-     *     email: string
-     * }
-     */
-    public function save(array $clientPayload): array;
+    public function existsByCpf(string $cpf, ?int $ignoreClientId = null): bool;
+
+    public function existsByEmail(string $email, ?int $ignoreClientId = null): bool;
+
+    public function save(Client $client): Client;
 }
-

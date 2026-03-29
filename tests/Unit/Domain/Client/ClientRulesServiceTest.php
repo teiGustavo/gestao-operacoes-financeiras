@@ -3,13 +3,16 @@
 declare(strict_types=1);
 
 use App\Domain\Client\ClientGender;
-use App\Domain\Client\Contracts\Repositories\ClientRepositoryInterface;
 use App\Domain\Client\Entities\Client;
 use App\Domain\Client\Services\ClientRulesService;
+use App\Domain\Client\ValueObjects\ClientCpf;
+use App\Domain\Client\ValueObjects\ClientEmail;
+use App\Domain\Shared\Result\ErrorCode;
+use Tests\Support\InMemoryClientRepository;
 
 it('returns failure when cpf is invalid', function () {
-    $service = new ClientRulesService();
-    $repository = new InMemoryClientRepository();
+    $service = new ClientRulesService;
+    $repository = new InMemoryClientRepository;
 
     $result = $service->buildClientForCreation(
         name: 'Maria Silva',
@@ -21,12 +24,12 @@ it('returns failure when cpf is invalid', function () {
     );
 
     expect($result->isFailure())->toBeTrue()
-        ->and($result->firstError()?->code)->toBe('CLIENT_CPF_INVALID');
+        ->and($result->firstError()?->code)->toBe(ErrorCode::ClientCpfInvalid);
 });
 
 it('returns failure when email already exists', function () {
-    $service = new ClientRulesService();
-    $repository = new InMemoryClientRepository();
+    $service = new ClientRulesService;
+    $repository = new InMemoryClientRepository;
 
     $existingClient = buildClient(
         id: 1,
@@ -46,12 +49,12 @@ it('returns failure when email already exists', function () {
     );
 
     expect($result->isFailure())->toBeTrue()
-        ->and($result->firstError()?->code)->toBe('CLIENT_EMAIL_ALREADY_EXISTS');
+        ->and($result->firstError()?->code)->toBe(ErrorCode::ClientEmailAlreadyExists);
 });
 
 it('builds a valid client when all business rules pass', function () {
-    $service = new ClientRulesService();
-    $repository = new InMemoryClientRepository();
+    $service = new ClientRulesService;
+    $repository = new InMemoryClientRepository;
 
     $result = $service->buildClientForCreation(
         name: 'Ana Costa',
@@ -69,8 +72,8 @@ it('builds a valid client when all business rules pass', function () {
 
 function buildClient(int $id, string $cpf, string $email): Client
 {
-    $cpfResult = App\Domain\Client\ValueObjects\ClientCpf::fromString($cpf);
-    $emailResult = App\Domain\Client\ValueObjects\ClientEmail::fromString($email);
+    $cpfResult = ClientCpf::fromString($cpf);
+    $emailResult = ClientEmail::fromString($email);
 
     return new Client(
         id: $id,
@@ -81,78 +84,3 @@ function buildClient(int $id, string $cpf, string $email): Client
         email: $emailResult->value(),
     );
 }
-
-final class InMemoryClientRepository implements ClientRepositoryInterface
-{
-    /**
-     * @var array<int, Client>
-     */
-    private array $clients = [];
-
-    public function findById(int $clientId): ?Client
-    {
-        return $this->clients[$clientId] ?? null;
-    }
-
-    public function findByCpf(string $cpf): ?Client
-    {
-        foreach ($this->clients as $client) {
-            if ($client->cpf->value() === $cpf) {
-                return $client;
-            }
-        }
-
-        return null;
-    }
-
-    public function findByEmail(string $email): ?Client
-    {
-        foreach ($this->clients as $client) {
-            if ($client->email->value() === $email) {
-                return $client;
-            }
-        }
-
-        return null;
-    }
-
-    public function existsByCpf(string $cpf, ?int $ignoreClientId = null): bool
-    {
-        foreach ($this->clients as $client) {
-            if ($ignoreClientId !== null && $client->id === $ignoreClientId) {
-                continue;
-            }
-
-            if ($client->cpf->value() === $cpf) {
-                return true;
-            }
-        }
-
-        return false;
-    }
-
-    public function existsByEmail(string $email, ?int $ignoreClientId = null): bool
-    {
-        foreach ($this->clients as $client) {
-            if ($ignoreClientId !== null && $client->id === $ignoreClientId) {
-                continue;
-            }
-
-            if ($client->email->value() === $email) {
-                return true;
-            }
-        }
-
-        return false;
-    }
-
-    public function save(Client $client): Client
-    {
-        $id = $client->id ?? (count($this->clients) + 1);
-        $persistedClient = $client->withId($id);
-        $this->clients[$id] = $persistedClient;
-
-        return $persistedClient;
-    }
-}
-

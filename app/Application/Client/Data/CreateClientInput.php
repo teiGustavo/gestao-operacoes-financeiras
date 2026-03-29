@@ -14,7 +14,5 @@ final readonly class CreateClientInput
         public string $birthDate,
         public ClientGender $gender,
         public string $email,
-    ) {
-    }
+    ) {}
 }
-

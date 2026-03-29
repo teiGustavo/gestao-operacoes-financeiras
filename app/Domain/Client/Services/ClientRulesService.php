@@ -10,6 +10,7 @@ use App\Domain\Client\Entities\Client;
 use App\Domain\Client\ValueObjects\ClientCpf;
 use App\Domain\Client\ValueObjects\ClientEmail;
 use App\Domain\Shared\Result\DomainError;
+use App\Domain\Shared\Result\ErrorCode;
 use App\Domain\Shared\Result\Result;
 use DateTimeImmutable;
 
@@ -30,7 +31,7 @@ final readonly class ClientRulesService
 
         if ($normalizedName === '') {
             return Result::failure(new DomainError(
-                code: 'CLIENT_NAME_REQUIRED',
+                code: ErrorCode::ClientNameRequired,
                 message: 'Nome do cliente e obrigatorio.',
             ));
         }
@@ -58,7 +59,7 @@ final readonly class ClientRulesService
 
         if ($clientRepository->existsByCpf($clientCpf->value())) {
             return Result::failure(new DomainError(
-                code: 'CLIENT_CPF_ALREADY_EXISTS',
+                code: ErrorCode::ClientCpfAlreadyExists,
                 message: 'Ja existe cliente com este CPF.',
                 context: ['cpf' => $clientCpf->value()],
             ));
@@ -66,7 +67,7 @@ final readonly class ClientRulesService
 
         if ($clientRepository->existsByEmail($clientEmail->value())) {
             return Result::failure(new DomainError(
-                code: 'CLIENT_EMAIL_ALREADY_EXISTS',
+                code: ErrorCode::ClientEmailAlreadyExists,
                 message: 'Ja existe cliente com este e-mail.',
                 context: ['email' => $clientEmail->value()],
             ));
@@ -91,14 +92,14 @@ final readonly class ClientRulesService
 
         if ($parsedDate === false || $parsedDate->format('Y-m-d') !== $birthDate) {
             return Result::failure(new DomainError(
-                code: 'CLIENT_BIRTH_DATE_INVALID',
+                code: ErrorCode::ClientBirthDateInvalid,
                 message: 'Data de nascimento deve estar no formato YYYY-MM-DD.',
             ));
         }
 
         if ($parsedDate > new DateTimeImmutable('today')) {
             return Result::failure(new DomainError(
-                code: 'CLIENT_BIRTH_DATE_IN_FUTURE',
+                code: ErrorCode::ClientBirthDateInFuture,
                 message: 'Data de nascimento nao pode ser futura.',
             ));
         }
@@ -106,4 +107,3 @@ final readonly class ClientRulesService
         return Result::success($parsedDate);
     }
 }
-

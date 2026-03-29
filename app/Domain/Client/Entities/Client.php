@@ -18,8 +18,7 @@ final readonly class Client
         public DateTimeImmutable $birthDate,
         public ClientGender $gender,
         public ClientEmail $email,
-    ) {
-    }
+    ) {}
 
     public function withId(int $id): self
     {
@@ -33,4 +32,3 @@ final readonly class Client
         );
     }
 }
-

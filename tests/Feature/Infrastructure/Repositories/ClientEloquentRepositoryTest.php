@@ -47,4 +47,3 @@ it('persists and reads client through eloquent repository', function () {
         ->and($foundClient?->email->value())->toBe('ana@example.com')
         ->and($foundClient?->gender)->toBe(ClientGender::FEMALE);
 });
-

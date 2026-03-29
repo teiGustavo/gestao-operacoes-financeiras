@@ -38,4 +38,3 @@ function buildUserEntity(?int $id, string $name, string $email, string $username
         password: $password,
     );
 }
-

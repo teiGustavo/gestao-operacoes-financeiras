@@ -24,4 +24,3 @@ it('fails when username is invalid', function (string $rawUsername) {
     'contains uppercase without normalization due to invalid char' => 'admin*main',
     'too long' => str_repeat('a', 51),
 ]);
-

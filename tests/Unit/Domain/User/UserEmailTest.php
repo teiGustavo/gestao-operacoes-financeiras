@@ -23,4 +23,3 @@ it('fails when user email is invalid', function (string $rawEmail) {
     'missing at' => 'admin.example.com',
     'missing domain' => 'admin@',
 ]);
-

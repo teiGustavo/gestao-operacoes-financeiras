@@ -12,20 +12,18 @@ use LogicException;
 final class Result
 {
     /**
-     * @param list<DomainError> $errors
+     * @param  list<DomainError>  $errors
      */
     private function __construct(
         private readonly bool $success,
         private readonly mixed $value,
         private readonly array $errors,
-    ) {
-    }
+    ) {}
 
     /**
      * @template TSuccess
      *
-     * @param TSuccess $value
-     *
+     * @param  TSuccess  $value
      * @return self<TSuccess>
      */
     public static function success(mixed $value = null): self
@@ -81,4 +79,3 @@ final class Result
         return $this->errors[0] ?? null;
     }
 }
-

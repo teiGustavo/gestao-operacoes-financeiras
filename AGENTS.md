@@ -18,6 +18,7 @@ This application is a Laravel application and its main Laravel ecosystems packag
 - laravel/pint (PINT) - v1
 - pestphp/pest (PEST) - v4
 - phpunit/phpunit (PHPUNIT) - v12
+- spatie/laravel-data (LARAVEL-DATA) - dev-main
 
 ## Skills Activation
 
@@ -40,6 +41,10 @@ This project has domain-specific skills available. You MUST activate the relevan
 
 - Stick to existing directory structure; don't create new base folders without approval.
 - Do not change the application's dependencies without approval.
+- Respect the layered structure under `app/`: `Domain/` (business rules), `Application/` (use cases), `Infrastructure/` (adapters), plus Eloquent models in `app/Models/`.
+- Keep `app/Domain/` isolated from infrastructure details. Do not import `App\Infrastructure\`, `App\Models\`, `Illuminate\Database\`, or `Spatie\LaravelData\` in domain classes (enforced by `tests/Feature/LayeringTest.php`).
+- Keep `app/Application/` use cases isolated from Eloquent details. Do not import `App\Models\` or `Illuminate\Database\Eloquent\` in application classes (enforced by `tests/Feature/LayeringTest.php`).
+- Follow the repository binding pattern: domain repository interfaces are bound to infrastructure Eloquent repositories in `app/Providers/DomainInfrastructureServiceProvider.php`, and the provider is registered in `bootstrap/providers.php`.
 
 ## Frontend Bundling
 
@@ -85,6 +90,7 @@ This project has domain-specific skills available. You MUST activate the relevan
 - Inspect routes with `php artisan route:list`. Filter with: `--method=GET`, `--name=users`, `--path=api`, `--except-vendor`, `--only-vendor`.
 - Read configuration values using dot notation: `php artisan config:show app.name`, `php artisan config:show database.default`. Or read config files directly from the `config/` directory.
 - To check environment variables, read the `.env` file directly.
+- If you are working through Docker, prefer the existing `Makefile` wrappers (`make artisan CMD='...'`, `make test ARGS='...'`, `make pint`) to run commands inside the `app` container.
 
 ## Tinker
 
@@ -135,6 +141,8 @@ This project has domain-specific skills available. You MUST activate the relevan
 - When creating models for tests, use the factories for the models. Check if the factory has custom states that can be used before manually setting up the model.
 - Faker: Use methods such as `$this->faker->word()` or `fake()->randomDigit()`. Follow existing conventions whether to use `$this->faker` or `fake()`.
 - When creating tests, make use of `php artisan make:test [options] {name}` to create a feature test, and pass `--unit` to create a unit test. Most tests should be feature tests.
+- Keep architecture guardrails covered: run `tests/Feature/LayeringTest.php` when changing classes under `app/Domain/`, `app/Application/`, or service providers.
+- Repository integration behavior is covered under `tests/Feature/Infrastructure/Repositories/*`; update/add tests there when changing repository bindings or persistence mappings.
 
 ## Vite Error
 

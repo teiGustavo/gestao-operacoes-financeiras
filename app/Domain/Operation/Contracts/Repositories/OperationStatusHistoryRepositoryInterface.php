@@ -4,23 +4,14 @@ declare(strict_types=1);
 
 namespace App\Domain\Operation\Contracts\Repositories;
 
+use App\Domain\Operation\Entities\OperationStatusHistory;
+
 interface OperationStatusHistoryRepositoryInterface
 {
-    /**
-     * @param array{
-     *     operation_id: int,
-     *     previous_status?: string|null,
-     *     new_status: string,
-     *     changed_by_user_id: int,
-     *     notes?: string|null,
-     *     changed_at?: string|null
-     * } $historyPayload
-     */
-    public function append(array $historyPayload): void;
+    public function append(OperationStatusHistory $history): void;
 
     /**
-     * @return array<int, array<string, mixed>>
+     * @return list<OperationStatusHistory>
      */
     public function listByOperationId(int $operationId): array;
 }
-

@@ -8,7 +8,7 @@ use App\Infrastructure\Data\Operation\OperationStatusHistoryData;
 use App\Infrastructure\Repositories\Mappers\Operation\OperationStatusHistoryDataMapper;
 
 it('maps operation status history domain entity to persistence data and back', function () {
-    $mapper = new OperationStatusHistoryDataMapper();
+    $mapper = new OperationStatusHistoryDataMapper;
 
     $history = new OperationStatusHistory(
         id: 9,
@@ -32,4 +32,3 @@ it('maps operation status history domain entity to persistence data and back', f
         ->and($mappedHistory->changedByUserId)->toBe(4)
         ->and($mappedHistory->changedAt->format('Y-m-d H:i:s'))->toBe('2026-05-02 09:30:00');
 });
-

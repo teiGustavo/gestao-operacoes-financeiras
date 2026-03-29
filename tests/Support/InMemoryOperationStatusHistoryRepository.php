@@ -30,4 +30,3 @@ final class InMemoryOperationStatusHistoryRepository implements OperationStatusH
         ));
     }
 }
-

@@ -7,11 +7,20 @@ namespace App\Infrastructure\Repositories\Mappers\Operation;
 use App\Domain\Operation\Entities\Installment;
 use App\Domain\Shared\Contracts\Mapper\DomainMapperInterface;
 use App\Infrastructure\Data\Operation\InstallmentData;
+use DateTimeImmutable;
 use InvalidArgumentException;
 
+/**
+ * @implements DomainMapperInterface<Installment, InstallmentData>
+ */
 final class InstallmentDataMapper implements DomainMapperInterface
 {
-    public function toDomain(mixed $payload): mixed
+    /**
+     * @param  InstallmentData  $payload
+     *
+     * @throws InvalidArgumentException
+     */
+    public function toDomain($payload): Installment
     {
         if (! $payload instanceof InstallmentData) {
             throw new InvalidArgumentException('Expected InstallmentData payload for domain mapping.');
@@ -21,15 +30,20 @@ final class InstallmentDataMapper implements DomainMapperInterface
             id: $payload->id,
             operationId: $payload->operationId,
             installmentNumber: $payload->installmentNumber,
-            dueDate: new \DateTimeImmutable($payload->dueDate),
+            dueDate: new DateTimeImmutable($payload->dueDate),
             value: $payload->value,
             paid: $payload->paid,
-            paidAt: $payload->paidAt === null ? null : new \DateTimeImmutable($payload->paidAt),
+            paidAt: $payload->paidAt === null ? null : new DateTimeImmutable($payload->paidAt),
             paidByUserId: $payload->paidByUserId,
         );
     }
 
-    public function toPersistence(mixed $payload): mixed
+    /**
+     * @param  Installment  $payload
+     *
+     * @throws InvalidArgumentException
+     */
+    public function toPersistence($payload): InstallmentData
     {
         if (! $payload instanceof Installment) {
             throw new InvalidArgumentException('Expected Installment payload for persistence mapping.');
@@ -47,4 +61,3 @@ final class InstallmentDataMapper implements DomainMapperInterface
         );
     }
 }
-

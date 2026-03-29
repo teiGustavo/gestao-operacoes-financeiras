@@ -16,7 +16,5 @@ final class OperationStatusHistoryData extends Data
         public int $changedByUserId,
         public ?string $notes,
         public string $changedAt,
-    ) {
-    }
+    ) {}
 }
-

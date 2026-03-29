@@ -28,4 +28,3 @@ final class InMemoryOperationRepository implements OperationRepositoryInterface
         return $persistedOperation;
     }
 }
-

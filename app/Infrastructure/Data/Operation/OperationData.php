@@ -25,7 +25,5 @@ final class OperationData extends Data
         public string $firstDueDate,
         public string $proposalCreatedDate,
         public ?string $paymentDate,
-    ) {
-    }
+    ) {}
 }
-

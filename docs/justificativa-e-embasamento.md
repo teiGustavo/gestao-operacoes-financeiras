@@ -33,6 +33,11 @@ seguindo os princípios da `Clean Architecture` e alguns princípios
 extraídos do `Domain-Driven Design` (como imutabilidade, objetos de valor e 
 entidades de domínio / domínio rico).
 
+> A estrutura padrão do Laravel ainda foi mantida,
+  tendo apenas algumas pastas/camadas adicionais, 
+  evitando quebrar a convenção do framework e, principalmente
+  a compatibilidade com o ecossistema Laravel.
+
 #### Filosofia das Movimentações/Operações: 
 Em um cenário real,
 as movimentações/operacões financeiras são tratadas como eventos imutáveis, ou seja,

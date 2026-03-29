@@ -7,7 +7,7 @@ Atomic pattern prevents race conditions and removes boilerplate.
 Incorrect:
 ```php
 $val = Cache::get('stats');
-if (! $val) {
+if (!$val) {
     $val = $this->computeStats();
     Cache::put('stats', $val, 60);
 }

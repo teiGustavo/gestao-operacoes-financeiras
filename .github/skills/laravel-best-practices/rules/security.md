@@ -80,7 +80,7 @@ Use `{{ }}` for HTML escaping. Only use `{!! !!}` for trusted, pre-sanitized con
 
 Incorrect:
 ```blade
-{!! $user->bio !!}
+{!!$user->bio !!}
 ```
 
 Correct:

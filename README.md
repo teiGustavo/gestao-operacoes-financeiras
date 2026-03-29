@@ -27,6 +27,11 @@ Além das pastas comuns do Laravel, o repositório inclui:
 - `mise.toml`: Configurações do gerenciador de versões `Mise`
 - `README.md`: Documentação principal do projeto
 
+A pasta `app/` contém os diretórios padrão + separação de camadas, com a motivação descrita na seção de justificativas técnicas. Os diretórios adicionais são:
+- `app/Domain/`: Contém as entidades de domínio e regras de negócio
+- `app/Application/`: Contém os casos de uso e serviços de aplicação
+- `app/Infrastructure/`: Contém as implementações de acesso a dados e outras integrações
+
 ---
 
 ## 🎯 Objetivos do Sistema

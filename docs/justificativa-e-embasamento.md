@@ -38,6 +38,45 @@ entidades de domínio / domínio rico).
   evitando quebrar a convenção do framework e, principalmente
   a compatibilidade com o ecossistema Laravel.
 
+#### Filosofia de Tratamento de Erros:
+Os erros da aplicação estão divididos em dois tipos principais:
+
+- Erros Excepcionais: São erros inesperados que ocorrem durante a execução da aplicação, 
+  como falhas de conexão com o banco de dados, erros de sintaxe, etc. 
+  Esses erros são tratados como `Exceptions` de fato, 
+  lançando uma `Exception` personalizada onde faz sentido, ou utilizando alguma
+  das `Exceptions` nativas do PHP que seja semânticamente adequada para o contexto do erro.
+
+- Erros Não Excepcionais: São erros esperados que podem ocorrer durante a execução 
+  normal da aplicação, como validação de dados, regras de negócio, etc. 
+  Esses erros são criados e tratados utilizando o padrão `Result` (Result Pattern), 
+  não espalhando "goto(s)" implícitos pela aplicação.
+
+Essa separação vem dos princípios citados para a arquitetura, e também, de
+linguagens como o `Go`, que trata erros como valores e obriga o tratamento explícito
+deles, evitando que erros sejam ignorados ou tratados de forma inadequada, e principalmente
+não utilizando exceções para controle de fluxo, 
+o que pode levar a código difícil de entender e manter.
+
+> Usar `Exceptions` e `try/catch` para controle de fluxo é uma "prática ruim"
+  (mesmo sendo o comum em projetos PHP / legados). Esse possui overhead de performance e
+  pode deixar a lógica confusa, pois o fluxo de execução fica 
+  "escondido" dentro dos blocos de `try/catch`. Além disso, há problemas em
+  compartilhamento de variáveis entre os blocos / de fora para os blocos, pois 
+  o try/catch cria um escopo separado.
+> 
+> Para aproveitar da clareza semântica que seria criar uma exception personalizada
+  para cada tipo de erro esperado, está sendo utilizada classes de erro personalizadas 
+  em conjunto com o padrão `Result`, onde as classes de erro personalizadas
+  deixam o código mais explícito e carrega consigo o código de erro, algo muito útil
+  para monitoramento, métricas e logs.
+> 
+> Além de todos os benefícios citados, o padrão `Result` também permite granularizar
+  os erros, podendo lançar diversos erros em um mesmo processo, como em contextos de 
+  validação dos dados 
+  (onde, para economizar requests, é retornado um array contendo
+  todos os erros encontrados).
+
 #### Filosofia das Movimentações/Operações: 
 Em um cenário real,
 as movimentações/operacões financeiras são tratadas como eventos imutáveis, ou seja,
@@ -57,7 +96,6 @@ Como o teste não especifica a necessidade de modificar os dados das operações
 as operações serão consideradas imutáveis, mas não será implementada uma lógica 
 de movimentações incrementais 
 (pois seria necessária uma política de audit/sanit check).
-
 
 #### Arredondamento:
 Quando for necessário algum arredondamento, será adotado o `Arredondamento Bancário`
@@ -296,8 +334,8 @@ Escolha Utilizada: `Database`.
 Por ser simples de configurar, 
 não requerer dependências adicionais e ser persistente por natureza.
 
-> NOTA: Para este volume de 50 mil registros, optei pelo MySQL pela 
-  simplicidade e persistência nativa. 
+> NOTA: Para este volume de 50 mil registros, optei por utilizar o driver `Database` 
+  pela simplicidade e persistência nativa. 
   Contudo, para escalas maiores, a arquitetura está pronta para migrar 
   para Redis com (RDB + AOF, por exemplo), 
   garantindo latência sub-milissegundo sem sacrificar a durabilidade dos jobs 

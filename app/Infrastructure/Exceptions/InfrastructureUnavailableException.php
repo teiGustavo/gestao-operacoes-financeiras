@@ -6,7 +6,4 @@ namespace App\Infrastructure\Exceptions;
 
 use RuntimeException;
 
-class InfrastructureUnavailableException extends RuntimeException
-{
-}
-
+class InfrastructureUnavailableException extends RuntimeException {}

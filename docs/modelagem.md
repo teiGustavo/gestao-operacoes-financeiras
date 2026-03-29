@@ -148,7 +148,7 @@ difícil de implementar).
 **Colunas:**
 - `id`: PK, BigInt, Auto Increment
 - `name`: Varchar(255), NOT NULL
-- `cpf`: Varchar(11), Unique, NOT NULL
+- `cpf`: Varchar(14), Unique, NOT NULL **
 - `birth_date`: Date, NOT NULL
 - `gender`: Varchar(20), NOT NULL, Default='prefer_not_to_say' ¹
 - `email`: Varchar(255), Unique, NOT NULL
@@ -160,9 +160,8 @@ difícil de implementar).
 - `UNIQUE KEY idx_clients_email (email)`
 
 **Constraints de Validação (CHECK):**
-- `CONSTRAINT chk_gender CHECK (gender IN ('male', 'female', 'other', 'prefer_not_to_say'))`
-- `CONSTRAINT chk_cpf_length CHECK (CHAR_LENGTH(cpf) = 11)`
-- `CONSTRAINT chk_email_format CHECK (email LIKE '%@%.%')`
+- `CONSTRAINT chk_client_gender CHECK (gender IN ('male', 'female', 'other', 'prefer_not_to_say'))`
+- `CONSTRAINT chk_client_email_format CHECK (email LIKE '%@%.%')`
 
 ### 2. Agreements (Conveniadas)
 
@@ -320,6 +319,9 @@ Os índices compostos foram estrategicamente projetados para:
   ou pseudonimizados, mas a estrutura de dados e o histórico de operações devem ser 
   mantidos para auditoria e conformidade).
 
+> Um CHECK no campo de `cpf`, também poderia ser adicionado, mas não foi, devido à
+  exigência do teste de armazenar o CPF como varchar (pois o campo muda de largura).
+
 ### Constraints de Validação
 Todos os constraints `CHECK` foram implementados no nível de banco de dados para:
 - Garantir integridade mesmo em atualizações diretas SQL
@@ -329,6 +331,12 @@ Todos os constraints `CHECK` foram implementados no nível de banco de dados par
 > Elas não são necessariamente obrigatórias, mas são uma camada extra de segurança 
   e integridade dos dados, especialmente em um cenário onde múltiplas
   interfaces ou integrações podem acessar o banco de dados.
+> 
+> Os CHECKs devem ser usados com cuidado, pois podem espalhar a lógica 
+  de validação entre a aplicação e o banco de dados, por isso, eles estão verificando
+  apenas as regras que nunca irão se alterar (pelo menos, no contexto do teste), 
+  os cases dos Enums da regra de negócio e os casos de consistência lógica 
+  (ex: paid_at não pode existir se paid não for TRUE).
 
 ### Glossário:
 - PK: Primary Key (Chave Primária)
@@ -350,10 +358,16 @@ Todos os constraints `CHECK` foram implementados no nível de banco de dados par
 - ³ - Valores aceitos para o campo `product_type`:
     - `payroll_loan` - Consignado
     - `personal_loan` - Não Consignado
+- **: O CPF é armazenado como varchar 
+  (o tamanho foi extraído dos dados com a função `=MÁXIMO(NÚM.CARACT(P2:P1048576))`)
+  devido à exigência do teste.
+  Trecho extraído do PDF do teste prático:
+  _"Atualmente o campo CPF está definido como varchar, portanto pode ser
+  integrado e armazenado no banco de dados nesse formato."_ 
 
 Para mais informações sobre o `status`: [RF05: Análise de Operação](../docs/levantamento-de-requisitos.md#status-possíveis-fluxo-sequencial).
 
-Para consultar a definição de cada `product_type`: [RF05: Análise de Operação](../docs/levantamento-de-requisitos.md#tipos-de-produto)
+Para consultar a definição de cada `product_type`: [RF05: Análise de Operação](../docs/levantamento-de-requisitos.md#tipos-de-produto).
 
 ---
 

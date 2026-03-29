@@ -24,4 +24,3 @@ it('creates operation status history entity with expected values', function () {
         ->and($history->notes)->toBe('Checklist documental aprovado')
         ->and($history->changedAt->format('Y-m-d H:i:s'))->toBe('2026-05-01 11:30:00');
 });
-

@@ -25,4 +25,3 @@ it('creates installment entity with expected values', function () {
         ->and($installment->paidAt?->format('Y-m-d H:i:s'))->toBe('2026-08-03 10:15:00')
         ->and($installment->paidByUserId)->toBe(7);
 });
-

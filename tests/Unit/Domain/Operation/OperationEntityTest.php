@@ -64,4 +64,3 @@ function buildOperationEntity(?int $id, OperationStatus $status, ?DateTimeImmuta
         paymentDate: $paymentDate,
     );
 }
-

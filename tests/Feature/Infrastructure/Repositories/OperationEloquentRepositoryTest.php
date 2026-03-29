@@ -30,7 +30,7 @@ it('persists and retrieves operation via operation repository', function () {
 
     $client = Client::query()->create([
         'name' => 'Cliente Operacao',
-        'cpf' => '123.456.789-00',
+        'cpf' => 'EXP3BTMYeodP9U',
         'birth_date' => '1990-01-01',
         'gender' => ClientGender::OTHER->value,
         'email' => 'cliente-operacao@example.com',
@@ -87,7 +87,7 @@ it('appends and lists status history entries for an operation', function () {
 
     $client = Client::query()->create([
         'name' => 'Cliente Historico',
-        'cpf' => '987.654.321-00',
+        'cpf' => 'xD6eJa9a11jbGm',
         'birth_date' => '1991-01-01',
         'gender' => ClientGender::FEMALE->value,
         'email' => 'cliente-historico@example.com',

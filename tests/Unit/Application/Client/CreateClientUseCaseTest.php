@@ -15,7 +15,7 @@ it('returns domain failure result for invalid payload', function () {
 
     $result = $useCase->execute(new CreateClientInput(
         name: ' ',
-        cpf: '39053344705',
+        cpf: 'EXP3BTMYeodP9U',
         birthDate: '1990-01-01',
         gender: ClientGender::FEMALE,
         email: 'ana@example.com',
@@ -31,7 +31,7 @@ it('creates and returns output data for valid payload', function () {
 
     $result = $useCase->execute(new CreateClientInput(
         name: 'Ana Costa',
-        cpf: '39053344705',
+        cpf: 'EXP3BTMYeodP9U',
         birthDate: '1990-01-01',
         gender: ClientGender::FEMALE,
         email: 'ana@example.com',
@@ -39,6 +39,6 @@ it('creates and returns output data for valid payload', function () {
 
     expect($result->isSuccess())->toBeTrue()
         ->and($result->value()->id)->toBe(1)
-        ->and($result->value()->cpf)->toBe('390.533.447-05')
+        ->and($result->value()->cpf)->toBe('EXP3BTMYeodP9U')
         ->and($result->value()->email)->toBe('ana@example.com');
 });

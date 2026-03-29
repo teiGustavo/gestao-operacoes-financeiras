@@ -16,7 +16,7 @@ it('returns failure when name is blank', function () {
 
     $result = $service->buildClientForCreation(
         name: '   ',
-        cpf: '39053344705',
+        cpf: 'EXP3BTMYeodP9U',
         birthDate: '1990-10-10',
         gender: ClientGender::FEMALE,
         email: 'maria@example.com',
@@ -33,7 +33,7 @@ it('returns failure when birth date format is invalid', function () {
 
     $result = $service->buildClientForCreation(
         name: 'Maria Silva',
-        cpf: '39053344705',
+        cpf: 'EXP3BTMYeodP9U',
         birthDate: '10/10/1990',
         gender: ClientGender::FEMALE,
         email: 'maria@example.com',
@@ -50,7 +50,7 @@ it('returns failure when birth date is in the future', function () {
 
     $result = $service->buildClientForCreation(
         name: 'Maria Silva',
-        cpf: '39053344705',
+        cpf: 'EXP3BTMYeodP9U',
         birthDate: '2999-10-10',
         gender: ClientGender::FEMALE,
         email: 'maria@example.com',
@@ -67,7 +67,7 @@ it('returns failure when cpf is invalid', function () {
 
     $result = $service->buildClientForCreation(
         name: 'Maria Silva',
-        cpf: '123',
+        cpf: 'EXP3BTMYeodP9-',
         birthDate: '1990-10-10',
         gender: ClientGender::FEMALE,
         email: 'maria@example.com',
@@ -84,7 +84,7 @@ it('returns failure when email is invalid', function () {
 
     $result = $service->buildClientForCreation(
         name: 'Maria Silva',
-        cpf: '39053344705',
+        cpf: 'EXP3BTMYeodP9U',
         birthDate: '1990-10-10',
         gender: ClientGender::FEMALE,
         email: 'maria.example.com',
@@ -101,13 +101,13 @@ it('returns failure when cpf already exists', function () {
 
     $repository->save(buildClient(
         id: 1,
-        cpf: '390.533.447-05',
+        cpf: 'EXP3BTMYeodP9U',
         email: 'maria@example.com',
     ));
 
     $result = $service->buildClientForCreation(
         name: 'Joao Souza',
-        cpf: '39053344705',
+        cpf: 'EXP3BTMYeodP9U',
         birthDate: '1988-02-11',
         gender: ClientGender::MALE,
         email: 'joao@example.com',
@@ -116,7 +116,7 @@ it('returns failure when cpf already exists', function () {
 
     expect($result->isFailure())->toBeTrue()
         ->and($result->firstError()?->code)->toBe(ErrorCode::ClientCpfAlreadyExists)
-        ->and($result->firstError()?->context)->toBe(['cpf' => '390.533.447-05']);
+        ->and($result->firstError()?->context)->toBe(['cpf' => 'EXP3BTMYeodP9U']);
 });
 
 it('returns failure when email already exists', function () {
@@ -125,7 +125,7 @@ it('returns failure when email already exists', function () {
 
     $existingClient = buildClient(
         id: 1,
-        cpf: '390.533.447-05',
+        cpf: 'EXP3BTMYeodP9U',
         email: 'maria@example.com',
     );
 
@@ -133,7 +133,7 @@ it('returns failure when email already exists', function () {
 
     $result = $service->buildClientForCreation(
         name: 'Joao Souza',
-        cpf: '901.055.234-06',
+        cpf: 'xD6eJa9a11jbGm',
         birthDate: '1988-02-11',
         gender: ClientGender::MALE,
         email: 'maria@example.com',
@@ -150,7 +150,7 @@ it('builds a valid client when all business rules pass', function () {
 
     $result = $service->buildClientForCreation(
         name: 'Ana Costa',
-        cpf: '39053344705',
+        cpf: 'EXP3BTMYeodP9U',
         birthDate: '1992-05-15',
         gender: ClientGender::FEMALE,
         email: 'ana@example.com',
@@ -160,7 +160,7 @@ it('builds a valid client when all business rules pass', function () {
     expect($result->isSuccess())->toBeTrue()
         ->and($result->value())->toBeInstanceOf(Client::class)
         ->and($result->value()->name)->toBe('Ana Costa')
-        ->and($result->value()->cpf->value())->toBe('390.533.447-05')
+        ->and($result->value()->cpf->value())->toBe('EXP3BTMYeodP9U')
         ->and($result->value()->email->value())->toBe('ana@example.com')
         ->and($result->value()->birthDate->format('Y-m-d'))->toBe('1992-05-15');
 });
@@ -171,7 +171,7 @@ it('trims name before creating a valid client', function () {
 
     $result = $service->buildClientForCreation(
         name: '  Ana Costa  ',
-        cpf: '39053344705',
+        cpf: 'EXP3BTMYeodP9U',
         birthDate: '1992-05-15',
         gender: ClientGender::FEMALE,
         email: 'ana@example.com',

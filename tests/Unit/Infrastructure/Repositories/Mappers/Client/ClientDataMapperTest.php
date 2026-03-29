@@ -15,7 +15,7 @@ it('maps domain client to persistence data and back', function () {
     $domainClient = new Client(
         id: 10,
         name: 'Maria Silva',
-        cpf: ClientCpf::fromString('39053344705')->value(),
+        cpf: ClientCpf::fromString('EXP3BTMYeodP9U')->value(),
         birthDate: new DateTimeImmutable('1991-06-15'),
         gender: ClientGender::FEMALE,
         email: ClientEmail::fromString('maria@example.com')->value(),
@@ -24,7 +24,7 @@ it('maps domain client to persistence data and back', function () {
     $persistenceData = $mapper->toPersistence($domainClient);
 
     expect($persistenceData)->toBeInstanceOf(ClientData::class)
-        ->and($persistenceData->cpf)->toBe('390.533.447-05')
+        ->and($persistenceData->cpf)->toBe('EXP3BTMYeodP9U')
         ->and($persistenceData->gender)->toBe(ClientGender::FEMALE->value);
 
     $mappedClient = $mapper->toDomain($persistenceData);

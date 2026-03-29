@@ -5,21 +5,22 @@ declare(strict_types=1);
 use App\Domain\Client\ValueObjects\ClientCpf;
 use App\Domain\Shared\Result\ErrorCode;
 
-it('formats cpf when input has only digits', function () {
-    $result = ClientCpf::fromString('39053344705');
+it('accepts an anonymized cpf with 14 alphanumeric characters', function () {
+    $result = ClientCpf::fromString('EXP3BTMYeodP9U');
 
     expect($result->isSuccess())->toBeTrue()
-        ->and($result->value()->value())->toBe('390.533.447-05');
+        ->and($result->value()->value())->toBe('EXP3BTMYeodP9U');
 });
 
-it('keeps same canonical format when input is masked', function () {
-    $result = ClientCpf::fromString('390.533.447-05');
+it('fails when anonymized cpf contains non alphanumeric characters', function () {
+    $result = ClientCpf::fromString('EXP3BTMYeodP9-');
 
-    expect($result->isSuccess())->toBeTrue()
-        ->and($result->value()->value())->toBe('390.533.447-05');
+    expect($result->isFailure())->toBeTrue()
+        ->and($result->firstError()?->code)->toBe(ErrorCode::ClientCpfInvalid)
+        ->and($result->firstError()?->context)->toBe(['cpf' => 'EXP3BTMYeodP9-']);
 });
 
-it('fails when cpf does not have 11 digits', function (string $rawCpf) {
+it('fails when anonymized cpf exceeds 14 characters', function (string $rawCpf) {
     $result = ClientCpf::fromString($rawCpf);
 
     expect($result->isFailure())->toBeTrue()
@@ -27,7 +28,5 @@ it('fails when cpf does not have 11 digits', function (string $rawCpf) {
         ->and($result->firstError()?->context)->toBe(['cpf' => $rawCpf]);
 })->with([
     'empty' => '',
-    'too short' => '1234567890',
-    'too long' => '123456789012',
-    'letters only' => 'abcdefghijk',
+    'too long' => 'EXP3BTMYeodP9UX',
 ]);

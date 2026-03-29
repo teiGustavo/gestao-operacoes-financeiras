@@ -17,32 +17,19 @@ final readonly class ClientCpf
      */
     public static function fromString(string $rawCpf): Result
     {
-        $digitsOnlyCpf = preg_replace('/\D+/', '', $rawCpf) ?? '';
-
-        if (strlen($digitsOnlyCpf) !== 11) {
+        if (strlen($rawCpf) > 14 || ! ctype_alnum($rawCpf)) {
             return Result::failure(new DomainError(
                 code: ErrorCode::ClientCpfInvalid,
-                message: 'CPF deve conter 11 digitos.',
+                message: 'CPF anonimizado deve conter somente caracteres alfanumericos e deve ter no maximo 14 de tamanho.',
                 context: ['cpf' => $rawCpf],
             ));
         }
 
-        return Result::success(new self(self::format($digitsOnlyCpf)));
+        return Result::success(new self($rawCpf));
     }
 
     public function value(): string
     {
         return $this->value;
-    }
-
-    private static function format(string $digitsOnlyCpf): string
-    {
-        return sprintf(
-            '%s.%s.%s-%s',
-            substr($digitsOnlyCpf, 0, 3),
-            substr($digitsOnlyCpf, 3, 3),
-            substr($digitsOnlyCpf, 6, 3),
-            substr($digitsOnlyCpf, 9, 2),
-        );
     }
 }

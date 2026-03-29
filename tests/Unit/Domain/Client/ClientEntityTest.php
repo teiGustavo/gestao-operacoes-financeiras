@@ -11,7 +11,7 @@ it('creates a new instance with id while preserving all original data', function
     $client = buildClientEntity(
         id: null,
         name: 'Ana Costa',
-        cpf: '39053344705',
+        cpf: 'EXP3BTMYeodP9U',
         birthDate: '1992-05-15',
         gender: ClientGender::FEMALE,
         email: 'ana@example.com',
@@ -22,7 +22,7 @@ it('creates a new instance with id while preserving all original data', function
     expect($clientWithId)->not->toBe($client)
         ->and($clientWithId->id)->toBe(99)
         ->and($clientWithId->name)->toBe('Ana Costa')
-        ->and($clientWithId->cpf->value())->toBe('390.533.447-05')
+        ->and($clientWithId->cpf->value())->toBe('EXP3BTMYeodP9U')
         ->and($clientWithId->birthDate->format('Y-m-d'))->toBe('1992-05-15')
         ->and($clientWithId->gender)->toBe(ClientGender::FEMALE)
         ->and($clientWithId->email->value())->toBe('ana@example.com');

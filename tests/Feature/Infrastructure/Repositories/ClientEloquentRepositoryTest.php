@@ -22,7 +22,7 @@ it('persists and reads client through eloquent repository', function () {
     /** @var ClientRepositoryInterface $repository */
     $repository = app(ClientRepositoryInterface::class);
 
-    $cpfResult = ClientCpf::fromString('39053344705');
+    $cpfResult = ClientCpf::fromString('EXP3BTMYeodP9U');
     $emailResult = ClientEmail::fromString('ana@example.com');
 
     $client = new Client(

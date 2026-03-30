@@ -19,6 +19,7 @@ it('shows operation report run status details by run id', function () {
         'started_at' => now()->subSeconds(50),
         'finished_at' => now(),
         'total_rows' => 42,
+        'metrics' => ['total' => 1.2345],
         'output_file_path' => 'reports/operations-report-run-10.csv',
     ]);
 
@@ -27,6 +28,7 @@ it('shows operation report run status details by run id', function () {
         ->expectsOutputToContain('- run_id: '.$reportRun->id)
         ->expectsOutputToContain('- status: '.OperationReportRun::STATUS_COMPLETED)
         ->expectsOutputToContain('- total_rows: 42')
+        ->expectsOutputToContain('- total_seconds: 1.2345')
         ->expectsOutputToContain('- output_file_path: reports/operations-report-run-10.csv')
         ->assertSuccessful();
 });

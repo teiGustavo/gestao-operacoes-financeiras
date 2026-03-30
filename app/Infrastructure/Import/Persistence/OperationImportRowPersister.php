@@ -7,6 +7,7 @@ namespace App\Infrastructure\Import\Persistence;
 use App\Infrastructure\Import\Contracts\OperationImportRowPersisterInterface;
 use App\Infrastructure\Queries\Eloquent\MySQL\OperationImportPersistenceEloquentMysqlQuery;
 use DateTimeImmutable;
+use InvalidArgumentException;
 
 final class OperationImportRowPersister implements OperationImportRowPersisterInterface
 {
@@ -53,9 +54,9 @@ final class OperationImportRowPersister implements OperationImportRowPersisterIn
         // 2) carregar mapas de IDs
         $loadClientIdsStart = microtime(true);
         $clientIdByCpf = $this->operationImportPersistenceQuery->loadClientIdByCpf($collection);
-        $clientIdByEmail = $this->operationImportPersistenceQuery->loadClientIdByEmail($collection);
         $loadClientIdsElapsed += microtime(true) - $loadClientIdsStart;
         $paidAtFallback = $timestamp;
+        $clientIdByEmail = null;
 
         // 3) inserir operações em lote e acumular parcelas para insert em chunks seguros
         $rowsPerInstallmentsInsert = $this->installmentsInsertChunkSizeResolver->resolve();
@@ -86,13 +87,34 @@ final class OperationImportRowPersister implements OperationImportRowPersisterIn
         };
 
         foreach ($collection as $row) {
-            $operationPayloadChunk[] = $this->buildOperationPayload(
-                row: $row,
-                clientIdByCpf: $clientIdByCpf,
-                clientIdByEmail: $clientIdByEmail,
-                agreementIdMap: $agreementIdMap,
-                timestamp: $timestamp,
-            );
+            try {
+                $operationPayloadChunk[] = $this->buildOperationPayload(
+                    row: $row,
+                    clientIdByCpf: $clientIdByCpf,
+                    clientIdByEmail: [],
+                    agreementIdMap: $agreementIdMap,
+                    timestamp: $timestamp,
+                );
+            } catch (InvalidArgumentException $invalidArgumentException) {
+                if ($invalidArgumentException->getMessage() !== 'cliente nao encontrado apos upsert') {
+                    throw $invalidArgumentException;
+                }
+
+                if ($clientIdByEmail === null) {
+                    $loadClientIdsFallbackStart = microtime(true);
+                    $clientIdByEmail = $this->operationImportPersistenceQuery->loadClientIdByEmail($collection);
+                    $loadClientIdsElapsed += microtime(true) - $loadClientIdsFallbackStart;
+                }
+
+                $operationPayloadChunk[] = $this->buildOperationPayload(
+                    row: $row,
+                    clientIdByCpf: $clientIdByCpf,
+                    clientIdByEmail: $clientIdByEmail,
+                    agreementIdMap: $agreementIdMap,
+                    timestamp: $timestamp,
+                );
+            }
+
             $sourceRowsChunk[] = $row;
 
             if (count($operationPayloadChunk) >= self::OPERATIONS_INSERT_CHUNK_SIZE) {

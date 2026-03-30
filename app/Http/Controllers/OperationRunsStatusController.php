@@ -10,6 +10,7 @@ use App\Models\OperationImportRun;
 use App\Models\OperationReportRun;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
 
 class OperationRunsStatusController extends Controller
 {
@@ -27,7 +28,7 @@ class OperationRunsStatusController extends Controller
 
         return response()->json([
             'data' => [
-                'recent_import_runs' => $importRuns->map(static function (OperationImportRun $operationImportRun): array {
+                'recent_import_runs' => $importRuns->map(function (OperationImportRun $operationImportRun): array {
                     return [
                         'id' => $operationImportRun->id,
                         'status' => $operationImportRun->status,
@@ -35,17 +36,25 @@ class OperationRunsStatusController extends Controller
                         'total_rows' => (int) $operationImportRun->total_rows,
                         'imported_rows' => (int) $operationImportRun->imported_rows,
                         'rejected_rows' => (int) $operationImportRun->rejected_rows,
+                        'elapsed_seconds' => $this->resolveElapsedSeconds(
+                            startedAt: $operationImportRun->started_at,
+                            finishedAt: $operationImportRun->finished_at,
+                        ),
                         'finished_at' => $operationImportRun->finished_at?->format('d/m/Y H:i:s'),
                         'failure_message' => $operationImportRun->failure_message,
                         'error_code' => $operationImportRun->resolvedErrorCode(),
                     ];
                 })->values()->all(),
-                'recent_report_runs' => $reportRuns->map(static function (OperationReportRun $operationReportRun): array {
+                'recent_report_runs' => $reportRuns->map(function (OperationReportRun $operationReportRun): array {
                     return [
                         'id' => $operationReportRun->id,
                         'status' => $operationReportRun->status,
                         'status_label' => $operationReportRun->statusLabel(),
                         'total_rows' => (int) $operationReportRun->total_rows,
+                        'elapsed_seconds' => $this->resolveElapsedSeconds(
+                            startedAt: $operationReportRun->started_at,
+                            finishedAt: $operationReportRun->finished_at,
+                        ),
                         'finished_at' => $operationReportRun->finished_at?->format('d/m/Y H:i:s'),
                         'download_url' => $operationReportRun->status === OperationReportRun::STATUS_COMPLETED
                             ? route('operations.report.csv.download', ['operationReportRun' => $operationReportRun->id])
@@ -57,5 +66,14 @@ class OperationRunsStatusController extends Controller
                 'refreshed_at' => now()->toIso8601String(),
             ],
         ]);
+    }
+
+    private function resolveElapsedSeconds(?Carbon $startedAt, ?Carbon $finishedAt): ?int
+    {
+        if ($startedAt === null || $finishedAt === null) {
+            return null;
+        }
+
+        return (int) $startedAt->diffInSeconds($finishedAt);
     }
 }

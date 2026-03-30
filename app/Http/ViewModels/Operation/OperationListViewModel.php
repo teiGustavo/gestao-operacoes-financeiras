@@ -12,6 +12,7 @@ use App\Models\OperationImportRun;
 use App\Models\OperationReportRun;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Pagination\LengthAwarePaginator as Paginator;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 
 final class OperationListViewModel
@@ -26,8 +27,8 @@ final class OperationListViewModel
      *     statusBlockedReasonsByCurrentStatus: array<string, array<string, string>>,
      *     productOptions: array<string, string>,
      *     agreementOptions: array<int, string>,
-     *     recentImportRuns: list<array{id:int,status:string,status_label:string,total_rows:int,imported_rows:int,rejected_rows:int,finished_at:string|null,failure_message:string|null,error_code:string|null}>,
-     *     recentReportRuns: list<array{id:int,status:string,status_label:string,total_rows:int,finished_at:string|null,download_url:string|null,failure_message:string|null,error_code:string|null}>
+     *     recentImportRuns: list<array{id:int,status:string,status_label:string,total_rows:int,imported_rows:int,rejected_rows:int,elapsed_seconds:int|null,finished_at:string|null,failure_message:string|null,error_code:string|null}>,
+     *     recentReportRuns: list<array{id:int,status:string,status_label:string,total_rows:int,elapsed_seconds:int|null,finished_at:string|null,download_url:string|null,failure_message:string|null,error_code:string|null}>
      * }
      */
     public function toArray(
@@ -104,7 +105,7 @@ final class OperationListViewModel
     }
 
     /**
-     * @return list<array{id:int,status:string,status_label:string,total_rows:int,imported_rows:int,rejected_rows:int,finished_at:string|null,failure_message:string|null,error_code:string|null}>
+     * @return list<array{id:int,status:string,status_label:string,total_rows:int,imported_rows:int,rejected_rows:int,elapsed_seconds:int|null,finished_at:string|null,failure_message:string|null,error_code:string|null}>
      */
     public function formatRecentImportRuns(?Collection $importRuns): array
     {
@@ -116,6 +117,10 @@ final class OperationListViewModel
                 'total_rows' => (int) $operationImportRun->total_rows,
                 'imported_rows' => (int) $operationImportRun->imported_rows,
                 'rejected_rows' => (int) $operationImportRun->rejected_rows,
+                'elapsed_seconds' => $this->resolveElapsedSeconds(
+                    startedAt: $operationImportRun->started_at,
+                    finishedAt: $operationImportRun->finished_at,
+                ),
                 'finished_at' => $operationImportRun->finished_at?->format('d/m/Y H:i:s'),
                 'failure_message' => $operationImportRun->failure_message,
                 'error_code' => $operationImportRun->resolvedErrorCode(),
@@ -124,7 +129,7 @@ final class OperationListViewModel
     }
 
     /**
-     * @return list<array{id:int,status:string,status_label:string,total_rows:int,finished_at:string|null,download_url:string|null,failure_message:string|null,error_code:string|null}>
+     * @return list<array{id:int,status:string,status_label:string,total_rows:int,elapsed_seconds:int|null,finished_at:string|null,download_url:string|null,failure_message:string|null,error_code:string|null}>
      */
     public function formatRecentReportRuns(?Collection $reportRuns): array
     {
@@ -134,6 +139,10 @@ final class OperationListViewModel
                 'status' => $operationReportRun->status,
                 'status_label' => $operationReportRun->statusLabel(),
                 'total_rows' => (int) $operationReportRun->total_rows,
+                'elapsed_seconds' => $this->resolveElapsedSeconds(
+                    startedAt: $operationReportRun->started_at,
+                    finishedAt: $operationReportRun->finished_at,
+                ),
                 'finished_at' => $operationReportRun->finished_at?->format('d/m/Y H:i:s'),
                 'download_url' => $operationReportRun->status === OperationReportRun::STATUS_COMPLETED
                     ? route('operations.report.csv.download', ['operationReportRun' => $operationReportRun->id])
@@ -142,5 +151,14 @@ final class OperationListViewModel
                 'error_code' => $operationReportRun->resolvedErrorCode(),
             ];
         })->values()->all() ?? [];
+    }
+
+    private function resolveElapsedSeconds(?Carbon $startedAt, ?Carbon $finishedAt): ?int
+    {
+        if ($startedAt === null || $finishedAt === null) {
+            return null;
+        }
+
+        return (int) $startedAt->diffInSeconds($finishedAt);
     }
 }

@@ -14,6 +14,7 @@ use App\Models\OperationImportRunChunk;
 use App\Models\OperationImportRunError;
 use App\Models\OperationImportStagingRow;
 use App\Models\User;
+use Illuminate\Database\QueryException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Queue;
 
@@ -307,6 +308,167 @@ it('splits large imports according to configured available workers', function ()
         ->and($chunks[3]->start_line_number)->toBe(7_505)
         ->and($chunks[3]->end_line_number)->toBe(10_002)
         ->and($chunks[3]->start_byte_offset)->toBeGreaterThan($chunks[2]->start_byte_offset);
+});
+
+it('records infrastructure failure for chunk audit and marks pending staging rows as failed', function () {
+    $run = OperationImportRun::query()->create([
+        'file_path' => '/tmp/inexistente.csv',
+        'status' => OperationImportRun::STATUS_PROCESSING,
+        'queued_at' => now(),
+        'started_at' => now(),
+    ]);
+
+    $chunk = OperationImportRunChunk::query()->create([
+        'operation_import_run_id' => $run->id,
+        'chunk_index' => 1,
+        'start_line_number' => 2,
+        'end_line_number' => 3,
+        'status' => OperationImportRunChunk::STATUS_PENDING,
+    ]);
+
+    OperationImportStagingRow::query()->create([
+        'operation_import_run_id' => $run->id,
+        'line_number' => 2,
+        'row_payload' => baseImportRow(),
+        'status' => OperationImportStagingRow::STATUS_VALIDATED,
+    ]);
+
+    OperationImportStagingRow::query()->create([
+        'operation_import_run_id' => $run->id,
+        'line_number' => 3,
+        'row_payload' => baseImportRow(),
+        'status' => OperationImportStagingRow::STATUS_PENDING,
+    ]);
+
+    $importer = Mockery::mock(OperationCsvImporter::class);
+    $importer->shouldReceive('importWithSummary')
+        ->once()
+        ->andThrow(new RuntimeException('falha infra simulada'));
+
+    $job = new ProcessOperationCsvImportChunkJob($chunk->id);
+
+    try {
+        $job->handle($importer);
+    } catch (RuntimeException) {
+    }
+
+    $chunk->refresh();
+
+    $runErrors = OperationImportRunError::query()
+        ->where('operation_import_run_id', $run->id)
+        ->get();
+
+    $stagingRows = OperationImportStagingRow::query()
+        ->where('operation_import_run_id', $run->id)
+        ->orderBy('line_number')
+        ->get();
+
+    expect($chunk->status)->toBe(OperationImportRunChunk::STATUS_FAILED)
+        ->and($runErrors)->toHaveCount(1)
+        ->and($runErrors->first()?->line_number)->toBeNull()
+        ->and($runErrors->first()?->message)->toContain('chunk 1 [2-3]')
+        ->and($stagingRows[0]->status)->toBe(OperationImportStagingRow::STATUS_FAILED)
+        ->and($stagingRows[1]->status)->toBe(OperationImportStagingRow::STATUS_FAILED);
+});
+
+it('keeps chunk pending on retryable deadlock errors and records retry audit without marking staging as failed', function () {
+    $run = OperationImportRun::query()->create([
+        'file_path' => '/tmp/inexistente.csv',
+        'status' => OperationImportRun::STATUS_PROCESSING,
+        'queued_at' => now(),
+        'started_at' => now(),
+    ]);
+
+    $chunk = OperationImportRunChunk::query()->create([
+        'operation_import_run_id' => $run->id,
+        'chunk_index' => 2,
+        'start_line_number' => 10,
+        'end_line_number' => 20,
+        'status' => OperationImportRunChunk::STATUS_PENDING,
+    ]);
+
+    OperationImportStagingRow::query()->create([
+        'operation_import_run_id' => $run->id,
+        'line_number' => 10,
+        'row_payload' => baseImportRow(),
+        'status' => OperationImportStagingRow::STATUS_VALIDATED,
+    ]);
+
+    $deadlockException = new QueryException(
+        connectionName: 'mysql',
+        sql: 'insert into clients (...) values (...)',
+        bindings: [],
+        previous: new PDOException('Deadlock found when trying to get lock; try restarting transaction'),
+    );
+    $deadlockException->errorInfo = ['40001', 1213, 'Deadlock found when trying to get lock; try restarting transaction'];
+
+    $importer = Mockery::mock(OperationCsvImporter::class);
+    $importer->shouldReceive('importWithSummary')
+        ->once()
+        ->andThrow($deadlockException);
+
+    $job = new ProcessOperationCsvImportChunkJob($chunk->id);
+
+    try {
+        $job->handle($importer);
+    } catch (QueryException) {
+    }
+
+    $chunk->refresh();
+
+    $runErrors = OperationImportRunError::query()
+        ->where('operation_import_run_id', $run->id)
+        ->get();
+
+    $stagingRows = OperationImportStagingRow::query()
+        ->where('operation_import_run_id', $run->id)
+        ->orderBy('line_number')
+        ->get();
+
+    expect($chunk->status)->toBe(OperationImportRunChunk::STATUS_PENDING)
+        ->and($chunk->failure_message)->toContain('Deadlock found')
+        ->and($runErrors)->toHaveCount(1)
+        ->and($runErrors->first()?->message)->toContain('retrying')
+        ->and($runErrors->first()?->row_payload['will_retry'] ?? false)->toBeTrue()
+        ->and($stagingRows[0]->status)->toBe(OperationImportStagingRow::STATUS_VALIDATED);
+});
+
+it('sanitizes oversized infrastructure failure messages persisted for audit', function () {
+    $run = OperationImportRun::query()->create([
+        'file_path' => '/tmp/inexistente.csv',
+        'status' => OperationImportRun::STATUS_PROCESSING,
+        'queued_at' => now(),
+        'started_at' => now(),
+    ]);
+
+    $chunk = OperationImportRunChunk::query()->create([
+        'operation_import_run_id' => $run->id,
+        'chunk_index' => 9,
+        'start_line_number' => 100,
+        'end_line_number' => 120,
+        'status' => OperationImportRunChunk::STATUS_PENDING,
+    ]);
+
+    $hugeMessage = 'Erro ao importar dados: '.str_repeat('x', 5_000).' (Connection: mysql, SQL: '.str_repeat('y', 5_000).')';
+
+    $importer = Mockery::mock(OperationCsvImporter::class);
+    $importer->shouldReceive('importWithSummary')
+        ->once()
+        ->andThrow(new RuntimeException($hugeMessage));
+
+    $job = new ProcessOperationCsvImportChunkJob($chunk->id);
+
+    try {
+        $job->handle($importer);
+    } catch (RuntimeException) {
+    }
+
+    $runError = OperationImportRunError::query()
+        ->where('operation_import_run_id', $run->id)
+        ->sole();
+
+    expect($runError->message)->not->toContain('(Connection:')
+        ->and(strlen($runError->message))->toBeLessThan(1_800);
 });
 
 /**

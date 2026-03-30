@@ -6,10 +6,12 @@ namespace App\Infrastructure\Report\Jobs;
 
 use App\Infrastructure\Report\OperationCsvReportGenerator;
 use App\Models\OperationReportRun;
+use App\Models\OperationReportRunChunk;
 use App\Notifications\OperationReportFinishedNotification;
 use Illuminate\Contracts\Queue\ShouldBeUnique;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
+use Illuminate\Support\Carbon;
 use Throwable;
 
 final class ProcessOperationCsvExportJob implements ShouldBeUnique, ShouldQueue
@@ -56,29 +58,69 @@ final class ProcessOperationCsvExportJob implements ShouldBeUnique, ShouldQueue
         try {
             /** @var array{status?: string, operation?: int, product?: string, agreement?: int} $filters */
             $filters = $operationReportRun->filters ?? [];
-            $referenceDate = $operationReportRun->reference_date?->toDateTimeImmutable()
-                ?? new \DateTimeImmutable('today');
-
-            $summary = $operationCsvReportGenerator->generate(
+            $chunkPlan = $operationCsvReportGenerator->buildChunkPlan(
                 filters: $filters,
-                referenceDate: $referenceDate,
-                runId: $operationReportRun->id,
+                workerCount: $this->resolveParallelWorkers(),
             );
+            $totalRows = $chunkPlan['total_rows'];
 
             $operationReportRun->forceFill([
-                'status' => OperationReportRun::STATUS_COMPLETED,
-                'output_file_path' => $summary['output_file_path'],
-                'total_rows' => $summary['total_rows'],
-                'finished_at' => now(),
-                'error_code' => null,
+                'total_rows' => $totalRows,
             ])->save();
 
-            $this->notifyRequestedByUser($operationReportRun);
+            if ($totalRows === 0) {
+                $summary = $operationCsvReportGenerator->mergeChunkFiles(
+                    runId: $operationReportRun->id,
+                    chunkRelativePaths: [],
+                );
+
+                $operationReportRun->forceFill([
+                    'status' => OperationReportRun::STATUS_COMPLETED,
+                    'output_file_path' => $summary['output_file_path'],
+                    'total_rows' => 0,
+                    'metrics' => [
+                        'query' => 0.0,
+                        'write' => 0.0,
+                        'merge' => (float) ($summary['metrics']['merge'] ?? 0.0),
+                        'total' => (float) ($summary['metrics']['total'] ?? 0.0),
+                        'metadata' => [
+                            'configured_workers' => $this->resolveParallelWorkers(),
+                            'planned_chunks' => 0,
+                            'completed_chunks' => 0,
+                            'failed_chunks' => 0,
+                        ],
+                    ],
+                    'finished_at' => now(),
+                    'error_code' => null,
+                ])->save();
+
+                $this->notifyRequestedByUser($operationReportRun);
+
+                return;
+            }
+
+            $chunks = $this->buildChunkPayloads(
+                operationReportRunId: $operationReportRun->id,
+                chunkPlanChunks: $chunkPlan['chunks'],
+            );
+            OperationReportRunChunk::query()->insert($chunks);
+
+            $chunkIds = OperationReportRunChunk::query()
+                ->where('operation_report_run_id', $operationReportRun->id)
+                ->orderBy('chunk_index')
+                ->pluck('id');
+
+            foreach ($chunkIds as $chunkId) {
+                dispatch(new ProcessOperationCsvExportChunkJob((int) $chunkId));
+            }
+
+            dispatch(new FinalizeOperationCsvExportRunJob($operationReportRun->id));
         } catch (Throwable $throwable) {
             $operationReportRun->forceFill([
                 'status' => OperationReportRun::STATUS_FAILED,
                 'failure_message' => $throwable->getMessage(),
                 'error_code' => OperationReportRun::ERROR_CODE_UNEXPECTED,
+                'metrics' => null,
                 'finished_at' => now(),
             ])->save();
 
@@ -123,5 +165,40 @@ final class ProcessOperationCsvExportJob implements ShouldBeUnique, ShouldQueue
         $operationReportRun->requestedByUser?->notify(
             new OperationReportFinishedNotification($operationReportRun),
         );
+    }
+
+    /**
+     * @param  list<array{chunk_index:int,start_operation_id:int,end_operation_id:int}>  $chunkPlanChunks
+     * @return list<array{operation_report_run_id:int,chunk_index:int,start_operation_id:int,end_operation_id:int,status:string,output_file_path:null,total_rows:int,metrics:null,failure_message:null,started_at:null,finished_at:null,created_at:Carbon,updated_at:Carbon}>
+     */
+    private function buildChunkPayloads(int $operationReportRunId, array $chunkPlanChunks): array
+    {
+        $now = now();
+        $payloads = [];
+
+        foreach ($chunkPlanChunks as $chunk) {
+            $payloads[] = [
+                'operation_report_run_id' => $operationReportRunId,
+                'chunk_index' => $chunk['chunk_index'],
+                'start_operation_id' => $chunk['start_operation_id'],
+                'end_operation_id' => $chunk['end_operation_id'],
+                'status' => 'pending',
+                'output_file_path' => null,
+                'total_rows' => 0,
+                'metrics' => null,
+                'failure_message' => null,
+                'started_at' => null,
+                'finished_at' => null,
+                'created_at' => $now,
+                'updated_at' => $now,
+            ];
+        }
+
+        return $payloads;
+    }
+
+    private function resolveParallelWorkers(): int
+    {
+        return max(1, (int) config('imports.parallel_workers', 4));
     }
 }

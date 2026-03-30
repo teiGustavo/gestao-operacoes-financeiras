@@ -160,6 +160,7 @@ $$
 - Deve suportar grande volume de dados
 - Não deve comprometer a performance da aplicação
 - Geração assíncrona para evitar bloqueio da interface
+- Geração assíncrona com processamento paralelo em chunks, com consolidação final em arquivo único
 - Deve registrar execução de exportação (status, datas e quantidade de linhas)
 - Deve permitir download autenticado do arquivo ao finalizar com sucesso
 

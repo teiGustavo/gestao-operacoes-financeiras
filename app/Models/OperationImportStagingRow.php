@@ -26,6 +26,8 @@ class OperationImportStagingRow extends Model
 
     public const string STATUS_REJECTED = 'rejected';
 
+    public const string STATUS_FAILED = 'failed';
+
     /**
      * @return array<string, string>
      */

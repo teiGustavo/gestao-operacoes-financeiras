@@ -11,11 +11,20 @@ use App\Infrastructure\Import\Validators\OperationImportHeaderValidator;
 use App\Infrastructure\Import\Validators\OperationImportRowValidator;
 use App\Models\OperationImportRunError;
 use App\Models\OperationImportStagingRow;
+use Illuminate\Support\Facades\DB;
 use InvalidArgumentException;
 
 class OperationCsvImporter
 {
-    private const int PERSIST_ROWS_CHUNK_SIZE = 2_000;
+    private const int DEFAULT_PERSIST_ROWS_CHUNK_SIZE = 2_000;
+
+    private const int MIN_PERSIST_ROWS_CHUNK_SIZE = 500;
+
+    private const int MAX_PERSIST_ROWS_CHUNK_SIZE = 10_000;
+
+    private const int STAGING_ROWS_UPSERT_CHUNK_SIZE = 2_000;
+
+    private const int ERROR_ROWS_INSERT_CHUNK_SIZE = 1_000;
 
     /**
      * @var list<string>
@@ -111,19 +120,18 @@ class OperationCsvImporter
         ];
 
         try {
+            $persistRowsChunkSize = $this->resolvePersistRowsChunkSize(
+                startLineNumber: $startLineNumber,
+                endLineNumber: $endLineNumber,
+            );
             $validatedRowsChunk = [];
+            $stagingRowsBuffer = [];
+            $errorRowsBuffer = [];
 
             try {
                 foreach ($extractedData->rows as $extractedRow) {
                     $totalRows++;
                     $lineNumber = $extractedRow['lineNumber'];
-
-                    $this->upsertStagingRow(
-                        operationImportRunId: $operationImportRunId,
-                        lineNumber: $lineNumber,
-                        rowPayload: $extractedRow['row'],
-                        status: OperationImportStagingRow::STATUS_PENDING,
-                    );
 
                     try {
                         $rowValidationStart = microtime(true);
@@ -135,26 +143,36 @@ class OperationCsvImporter
                             ),
                         ];
 
-                        $this->upsertStagingRow(
-                            operationImportRunId: $operationImportRunId,
+                        $this->enqueueStagingRowUpsert(
+                            stagingRowsBuffer: $stagingRowsBuffer,
                             lineNumber: $lineNumber,
                             rowPayload: $extractedRow['row'],
-                            status: OperationImportStagingRow::STATUS_VALIDATED,
+                            status: OperationImportStagingRow::STATUS_PENDING,
+                        );
+
+                        $this->flushStagingRowsBufferIfNeeded(
+                            operationImportRunId: $operationImportRunId,
+                            stagingRowsBuffer: $stagingRowsBuffer,
                         );
 
                         $rowValidationElapsed += microtime(true) - $rowValidationStart;
                     } catch (InvalidArgumentException $invalidArgumentException) {
                         $rejectedRows++;
                         $this->appendErrorSummary($errorSummary, $invalidArgumentException->getMessage());
-                        $this->recordRowError(
+                        $this->enqueueRowError(
+                            errorRowsBuffer: $errorRowsBuffer,
                             operationImportRunId: $operationImportRunId,
                             lineNumber: $lineNumber,
                             message: $invalidArgumentException->getMessage(),
                             rowPayload: $extractedRow['row'],
                         );
-
-                        $this->upsertStagingRow(
+                        $this->flushErrorRowsBufferIfNeeded(
                             operationImportRunId: $operationImportRunId,
+                            errorRowsBuffer: $errorRowsBuffer,
+                        );
+
+                        $this->enqueueStagingRowUpsert(
+                            stagingRowsBuffer: $stagingRowsBuffer,
                             lineNumber: $lineNumber,
                             rowPayload: $extractedRow['row'],
                             status: OperationImportStagingRow::STATUS_REJECTED,
@@ -162,10 +180,20 @@ class OperationCsvImporter
                             processedAtNow: true,
                         );
 
+                        $this->flushStagingRowsBufferIfNeeded(
+                            operationImportRunId: $operationImportRunId,
+                            stagingRowsBuffer: $stagingRowsBuffer,
+                        );
+
                         continue;
                     }
 
-                    if (count($validatedRowsChunk) >= self::PERSIST_ROWS_CHUNK_SIZE) {
+                    if (count($validatedRowsChunk) >= $persistRowsChunkSize) {
+                        $this->flushStagingRowsBuffer(
+                            operationImportRunId: $operationImportRunId,
+                            stagingRowsBuffer: $stagingRowsBuffer,
+                        );
+
                         $this->persistValidatedRowsChunk(
                             validatedRowsChunk: $validatedRowsChunk,
                             persistElapsed: $persistElapsed,
@@ -178,7 +206,8 @@ class OperationCsvImporter
             } catch (InvalidArgumentException $invalidArgumentException) {
                 $rejectedRows++;
                 $this->appendErrorSummary($errorSummary, $invalidArgumentException->getMessage());
-                $this->recordRowError(
+                $this->enqueueRowError(
+                    errorRowsBuffer: $errorRowsBuffer,
                     operationImportRunId: $operationImportRunId,
                     lineNumber: null,
                     message: $invalidArgumentException->getMessage(),
@@ -186,12 +215,22 @@ class OperationCsvImporter
                 );
             }
 
+            $this->flushStagingRowsBuffer(
+                operationImportRunId: $operationImportRunId,
+                stagingRowsBuffer: $stagingRowsBuffer,
+            );
+
             $this->persistValidatedRowsChunk(
                 validatedRowsChunk: $validatedRowsChunk,
                 persistElapsed: $persistElapsed,
                 persistedRows: $importedRows,
                 persistBreakdown: $persistBreakdown,
                 operationImportRunId: $operationImportRunId,
+            );
+
+            $this->flushErrorRowsBuffer(
+                operationImportRunId: $operationImportRunId,
+                errorRowsBuffer: $errorRowsBuffer,
             );
         } catch (InvalidArgumentException $invalidArgumentException) {
             throw $invalidArgumentException;
@@ -345,22 +384,26 @@ class OperationCsvImporter
         $rowsToPersist = array_column($validatedRowsChunk, 'row');
 
         $persistStart = microtime(true);
-        $chunkBreakdown = $this->operationImportRowPersister->persistMany($rowsToPersist);
+        $chunkBreakdown = DB::transaction(function () use ($rowsToPersist, $validatedRowsChunk, $operationImportRunId): array {
+            $chunkBreakdown = $this->operationImportRowPersister->persistMany($rowsToPersist);
+
+            if ($operationImportRunId !== null) {
+                $persistedLineNumbers = array_column($validatedRowsChunk, 'line_number');
+
+                OperationImportStagingRow::query()
+                    ->where('operation_import_run_id', $operationImportRunId)
+                    ->whereIn('line_number', $persistedLineNumbers)
+                    ->update([
+                        'status' => OperationImportStagingRow::STATUS_PERSISTED,
+                        'processed_at' => now(),
+                        'error_message' => null,
+                    ]);
+            }
+
+            return $chunkBreakdown;
+        }, 5);
         $persistElapsed += microtime(true) - $persistStart;
         $persistedRows += count($rowsToPersist);
-
-        if ($operationImportRunId !== null) {
-            $persistedLineNumbers = array_column($validatedRowsChunk, 'line_number');
-
-            OperationImportStagingRow::query()
-                ->where('operation_import_run_id', $operationImportRunId)
-                ->whereIn('line_number', $persistedLineNumbers)
-                ->update([
-                    'status' => OperationImportStagingRow::STATUS_PERSISTED,
-                    'processed_at' => now(),
-                    'error_message' => null,
-                ]);
-        }
 
         foreach ($chunkBreakdown as $metric => $elapsed) {
             $persistBreakdown[$metric] += $elapsed;
@@ -380,7 +423,8 @@ class OperationCsvImporter
     /**
      * @param  array<string, string>|null  $rowPayload
      */
-    private function recordRowError(
+    private function enqueueRowError(
+        array &$errorRowsBuffer,
         ?int $operationImportRunId,
         ?int $lineNumber,
         string $message,
@@ -390,40 +434,144 @@ class OperationCsvImporter
             return;
         }
 
-        OperationImportRunError::query()->create([
+        $errorRowsBuffer[] = [
             'operation_import_run_id' => $operationImportRunId,
             'line_number' => $lineNumber,
             'message' => $message,
             'row_payload' => $rowPayload,
-        ]);
+        ];
     }
 
     /**
+     * @param  list<array{operation_import_run_id: int, line_number: int|null, message: string, row_payload: array<string, string>|null}>  $errorRowsBuffer
+     */
+    private function flushErrorRowsBufferIfNeeded(?int $operationImportRunId, array &$errorRowsBuffer): void
+    {
+        if (count($errorRowsBuffer) < self::ERROR_ROWS_INSERT_CHUNK_SIZE) {
+            return;
+        }
+
+        $this->flushErrorRowsBuffer(
+            operationImportRunId: $operationImportRunId,
+            errorRowsBuffer: $errorRowsBuffer,
+        );
+    }
+
+    /**
+     * @param  list<array{operation_import_run_id: int, line_number: int|null, message: string, row_payload: array<string, string>|null}>  $errorRowsBuffer
+     */
+    private function flushErrorRowsBuffer(?int $operationImportRunId, array &$errorRowsBuffer): void
+    {
+        if ($operationImportRunId === null || $errorRowsBuffer === []) {
+            $errorRowsBuffer = [];
+
+            return;
+        }
+
+        $now = now();
+
+        $payload = array_map(static function (array $errorRow) use ($now): array {
+            return [
+                'operation_import_run_id' => $errorRow['operation_import_run_id'],
+                'line_number' => $errorRow['line_number'],
+                'message' => $errorRow['message'],
+                'row_payload' => $errorRow['row_payload'] === null
+                    ? null
+                    : json_encode($errorRow['row_payload'], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
+                'created_at' => $now,
+                'updated_at' => $now,
+            ];
+        }, $errorRowsBuffer);
+
+        OperationImportRunError::query()->insert($payload);
+
+        $errorRowsBuffer = [];
+    }
+
+    /**
+     * @param  array<int, array{line_number: int, row_payload: array<string, string>, status: string, error_message: string|null, processed_at: string|null}>  $stagingRowsBuffer
      * @param  array<string, string>  $rowPayload
      */
-    private function upsertStagingRow(
-        ?int $operationImportRunId,
+    private function enqueueStagingRowUpsert(
+        array &$stagingRowsBuffer,
         int $lineNumber,
         array $rowPayload,
         string $status,
         ?string $errorMessage = null,
         bool $processedAtNow = false,
     ): void {
-        if ($operationImportRunId === null) {
+        $stagingRowsBuffer[] = [
+            'line_number' => $lineNumber,
+            'row_payload' => $rowPayload,
+            'status' => $status,
+            'error_message' => $errorMessage,
+            'processed_at' => $processedAtNow ? now()->toDateTimeString() : null,
+        ];
+    }
+
+    /**
+     * @param  array<int, array{line_number: int, row_payload: array<string, string>, status: string, error_message: string|null, processed_at: string|null}>  $stagingRowsBuffer
+     */
+    private function flushStagingRowsBufferIfNeeded(?int $operationImportRunId, array &$stagingRowsBuffer): void
+    {
+        if (count($stagingRowsBuffer) < self::STAGING_ROWS_UPSERT_CHUNK_SIZE) {
             return;
         }
 
-        OperationImportStagingRow::query()->updateOrCreate(
-            [
-                'operation_import_run_id' => $operationImportRunId,
-                'line_number' => $lineNumber,
-            ],
-            [
-                'row_payload' => $rowPayload,
-                'status' => $status,
-                'error_message' => $errorMessage,
-                'processed_at' => $processedAtNow ? now() : null,
-            ],
+        $this->flushStagingRowsBuffer(
+            operationImportRunId: $operationImportRunId,
+            stagingRowsBuffer: $stagingRowsBuffer,
         );
+    }
+
+    /**
+     * @param  array<int, array{line_number: int, row_payload: array<string, string>, status: string, error_message: string|null, processed_at: string|null}>  $stagingRowsBuffer
+     */
+    private function flushStagingRowsBuffer(?int $operationImportRunId, array &$stagingRowsBuffer): void
+    {
+        if ($operationImportRunId === null || $stagingRowsBuffer === []) {
+            $stagingRowsBuffer = [];
+
+            return;
+        }
+
+        $now = now();
+        $payload = array_map(
+            function (array $row) use ($operationImportRunId, $now): array {
+                return [
+                    'operation_import_run_id' => $operationImportRunId,
+                    'line_number' => $row['line_number'],
+                    'row_payload' => json_encode($row['row_payload'], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
+                    'status' => $row['status'],
+                    'error_message' => $row['error_message'],
+                    'processed_at' => $row['processed_at'],
+                    'created_at' => $now,
+                    'updated_at' => $now,
+                ];
+            },
+            $stagingRowsBuffer,
+        );
+
+        OperationImportStagingRow::query()->upsert(
+            $payload,
+            ['operation_import_run_id', 'line_number'],
+            ['row_payload', 'status', 'error_message', 'processed_at', 'updated_at'],
+        );
+
+        $stagingRowsBuffer = [];
+    }
+
+    private function resolvePersistRowsChunkSize(?int $startLineNumber, ?int $endLineNumber): int
+    {
+        if ($startLineNumber === null || $endLineNumber === null || $endLineNumber < $startLineNumber) {
+            return self::DEFAULT_PERSIST_ROWS_CHUNK_SIZE;
+        }
+
+        $rowsInScope = $endLineNumber - $startLineNumber + 1;
+        $workers = max(1, (int) config('imports.parallel_workers', 4));
+        $targetBatchesPerWorker = 3;
+        $rawChunkSize = (int) ceil($rowsInScope / max(1, $workers * $targetBatchesPerWorker));
+
+        return max(self::MIN_PERSIST_ROWS_CHUNK_SIZE, min(self::MAX_PERSIST_ROWS_CHUNK_SIZE, $rawChunkSize));
     }
 }

@@ -420,6 +420,7 @@ difícil de implementar).
 - `started_at`: Timestamp, Nullable
 - `finished_at`: Timestamp, Nullable
 - `total_rows`: Unsigned Int, Default=0, NOT NULL
+- `metrics`: JSON, Nullable
 - `failure_message`: Text, Nullable
 - `error_code`: Varchar(255), Nullable
 - `created_at`: Timestamp, Default=CURRENT_TIMESTAMP
@@ -430,6 +431,33 @@ difícil de implementar).
 
 **Foreign Keys:**
 - `CONSTRAINT fk_operation_report_runs_requested_by_user_id FOREIGN KEY (requested_by_user_id) REFERENCES users(id) ON DELETE SET NULL`
+
+### 13. OperationReportRunChunks (Chunks de Execução da Exportação)
+
+**Colunas:**
+- `id`: PK, BigInt, Auto Increment
+- `operation_report_run_id`: FK, BigInt, NOT NULL
+- `chunk_index`: Unsigned Int, NOT NULL
+- `start_operation_id`: Unsigned BigInt, NOT NULL
+- `end_operation_id`: Unsigned BigInt, NOT NULL
+- `status`: Varchar(255), NOT NULL
+- `output_file_path`: Varchar(255), Nullable
+- `total_rows`: Unsigned Int, Default=0, NOT NULL
+- `metrics`: JSON, Nullable
+- `failure_message`: Text, Nullable
+- `started_at`: Timestamp, Nullable
+- `finished_at`: Timestamp, Nullable
+- `created_at`: Timestamp, Default=CURRENT_TIMESTAMP
+- `updated_at`: Timestamp, Default=CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+
+**Índices:**
+- `UNIQUE KEY idx_orrc_run_chunk (operation_report_run_id, chunk_index)`
+- `KEY idx_orrc_run_status (operation_report_run_id, status)`
+
+**Foreign Keys:**
+- `CONSTRAINT fk_operation_report_run_chunks_run_id FOREIGN KEY (operation_report_run_id) REFERENCES operation_report_runs(id) ON DELETE CASCADE`
+
+> O tamanho do chunk de exportação é dinâmico e é calculado por execução com base em `IMPORT_WORKERS`.
 
 ---
 
@@ -455,6 +483,7 @@ Os índices compostos foram estrategicamente projetados para:
 - **`operation_import_staging_rows` → `operation_import_runs`**: `ON DELETE CASCADE` → Linhas auxiliares de staging são removidas junto com a execução
 - **`operation_import_run_chunks` → `operation_import_runs`**: `ON DELETE CASCADE` → Chunks e métricas por chunk são removidos junto com a execução
 - **`operation_report_runs` → `users`**: `ON DELETE SET NULL` → Mantém histórico de exportações mesmo se o usuário for removido
+- **`operation_report_run_chunks` → `operation_report_runs`**: `ON DELETE CASCADE` → Chunks e arquivos parciais da exportação são removidos junto com a execução
 
 > Casos como a deleção de um cliente ou conveniada com operações ativas, 
   ou a deleção de um usuário com histórico de alterações,
@@ -540,3 +569,5 @@ Para consultar a definição de cada `product_type`: [RF05: Análise de Operaç�
 - Um `chunk de processamento` pertence a uma `execução de importação` → `(N:1)`
 - Um `usuário` pode solicitar várias `execuções de relatório` → `(1:N)`
 - Uma `execução de relatório` pode pertencer a um `usuário` solicitante → `(N:1)`
+- Uma `execução de relatório` pode ter vários `chunks de processamento` → `(1:N)`
+- Um `chunk de processamento de relatório` pertence a uma `execução de relatório` → `(N:1)`

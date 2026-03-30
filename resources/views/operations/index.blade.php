@@ -143,6 +143,7 @@
                                     <th class="px-3 py-2 text-left font-medium text-slate-700">Total</th>
                                     <th class="px-3 py-2 text-left font-medium text-slate-700">Importadas</th>
                                     <th class="px-3 py-2 text-left font-medium text-slate-700">Rejeitadas</th>
+                                    <th class="px-3 py-2 text-left font-medium text-slate-700">Tempo gasto</th>
                                     <th class="px-3 py-2 text-left font-medium text-slate-700">Finalizado em</th>
                                     <th class="px-3 py-2 text-left font-medium text-slate-700">Motivo da falha</th>
                                 </tr>
@@ -155,6 +156,7 @@
                                         <td class="px-3 py-2">{{ $importRun['total_rows'] }}</td>
                                         <td class="px-3 py-2">{{ $importRun['imported_rows'] }}</td>
                                         <td class="px-3 py-2">{{ $importRun['rejected_rows'] }}</td>
+                                        <td class="px-3 py-2">{{ $importRun['elapsed_seconds']? $importRun['elapsed_seconds'] . 's' : '-' }}</td>
                                         <td class="px-3 py-2">{{ $importRun['finished_at'] ?? '-' }}</td>
                                         <td class="px-3 py-2">{{ $importRun['failure_message'] ?? '-' }}</td>
                                     </tr>
@@ -179,6 +181,7 @@
                                     <th class="px-3 py-2 text-left font-medium text-slate-700">Run</th>
                                     <th class="px-3 py-2 text-left font-medium text-slate-700">Status</th>
                                     <th class="px-3 py-2 text-left font-medium text-slate-700">Linhas</th>
+                                    <th class="px-3 py-2 text-left font-medium text-slate-700">Tempo (s)</th>
                                     <th class="px-3 py-2 text-left font-medium text-slate-700">Finalizado em</th>
                                     <th class="px-3 py-2 text-left font-medium text-slate-700">Motivo da falha</th>
                                     <th class="px-3 py-2 text-left font-medium text-slate-700">Acao</th>
@@ -190,6 +193,7 @@
                                         <td class="px-3 py-2">#{{ $reportRun['id'] }}</td>
                                         <td class="px-3 py-2">{{ $reportRun['status_label'] }}</td>
                                         <td class="px-3 py-2">{{ $reportRun['total_rows'] }}</td>
+                                        <td class="px-3 py-2">{{ $importRun['elapsed_seconds']? $importRun['elapsed_seconds'] . 's' : '-' }}</td>
                                         <td class="px-3 py-2">{{ $reportRun['finished_at'] ?? '-' }}</td>
                                         <td class="px-3 py-2">
                                             @if ($reportRun['status'] === 'failed')
@@ -353,6 +357,7 @@
                         <td class="px-3 py-2">#${escapeHtml(reportRun.id)}</td>
                         <td class="px-3 py-2">${escapeHtml(reportRun.status_label)}</td>
                         <td class="px-3 py-2">${escapeHtml(reportRun.total_rows)}</td>
+                        <td class="px-3 py-2">${escapeHtml(reportRun.elapsed_seconds ?? '-')}</td>
                         <td class="px-3 py-2">${escapeHtml(reportRun.finished_at ?? '-')}</td>
                         <td class="px-3 py-2">${failureReason}</td>
                         <td class="px-3 py-2">${actionHtml}</td>
@@ -368,6 +373,7 @@
                         <td class="px-3 py-2">${escapeHtml(importRun.total_rows)}</td>
                         <td class="px-3 py-2">${escapeHtml(importRun.imported_rows)}</td>
                         <td class="px-3 py-2">${escapeHtml(importRun.rejected_rows)}</td>
+                        <td class="px-3 py-2">${escapeHtml(importRun.elapsed_seconds ?? '-')}</td>
                         <td class="px-3 py-2">${escapeHtml(importRun.finished_at ?? '-')}</td>
                         <td class="px-3 py-2">${escapeHtml(importRun.failure_message ?? '-')}</td>
                     </tr>

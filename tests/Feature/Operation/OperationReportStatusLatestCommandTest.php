@@ -19,6 +19,7 @@ it('shows latest operation report run status details', function () {
         'started_at' => now()->subMinute(),
         'finished_at' => now()->subSeconds(20),
         'total_rows' => 1,
+        'metrics' => ['total' => 0.4567],
         'output_file_path' => 'reports/older.csv',
     ]);
 
@@ -30,6 +31,7 @@ it('shows latest operation report run status details', function () {
         'started_at' => now()->subSeconds(50),
         'finished_at' => now(),
         'total_rows' => 10,
+        'metrics' => ['total' => 1.9876],
         'output_file_path' => null,
         'failure_message' => 'falha simulada',
     ]);
@@ -39,6 +41,7 @@ it('shows latest operation report run status details', function () {
         ->expectsOutputToContain('- run_id: '.$latestRun->id)
         ->expectsOutputToContain('- status: '.OperationReportRun::STATUS_FAILED)
         ->expectsOutputToContain('- total_rows: 10')
+        ->expectsOutputToContain('- total_seconds: 1.9876')
         ->expectsOutputToContain('- output_file_path:')
         ->expectsOutputToContain('- failure_message: falha simulada')
         ->expectsOutputToContain('- error_code: '.OperationReportRun::ERROR_CODE_UNEXPECTED)

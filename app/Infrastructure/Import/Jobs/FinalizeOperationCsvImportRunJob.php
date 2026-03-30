@@ -68,36 +68,9 @@ final class FinalizeOperationCsvImportRunJob implements ShouldQueue
                 fn (OperationImportRunChunk $chunk): bool => $chunk->status === OperationImportRunChunk::STATUS_FAILED,
             );
 
-            if ($hasFailedChunk) {
-                $firstFailureMessage = $chunks
-                    ->first(fn (OperationImportRunChunk $chunk): bool => $chunk->status === OperationImportRunChunk::STATUS_FAILED)
-                    ?->failure_message;
-
-                $run->forceFill([
-                    'status' => OperationImportRun::STATUS_FAILED,
-                    'failure_message' => $firstFailureMessage,
-                    'error_code' => OperationImportRun::ERROR_CODE_UNEXPECTED,
-                    'finished_at' => now(),
-                ])->save();
-
-                $this->notifyRequestedByUser($run);
-
-                return;
-            }
-
             $rejectedRows = (int) $chunks->sum('rejected_rows');
             $importedRows = (int) $chunks->sum('imported_rows');
             $totalRows = (int) $chunks->sum('total_rows');
-
-            $errorSummary = [];
-
-            foreach ($chunks as $chunk) {
-                $chunkErrorSummary = $chunk->error_summary ?? [];
-
-                foreach ($chunkErrorSummary as $message => $occurrences) {
-                    $errorSummary[$message] = ($errorSummary[$message] ?? 0) + (int) $occurrences;
-                }
-            }
 
             $persistBreakdown = [
                 'upsert_clients' => 0.0,
@@ -117,7 +90,15 @@ final class FinalizeOperationCsvImportRunJob implements ShouldQueue
                 'persist_breakdown' => $persistBreakdown,
             ];
 
+            $errorSummary = [];
+
             foreach ($chunks as $chunk) {
+                $chunkErrorSummary = $chunk->error_summary ?? [];
+
+                foreach ($chunkErrorSummary as $message => $occurrences) {
+                    $errorSummary[$message] = ($errorSummary[$message] ?? 0) + (int) $occurrences;
+                }
+
                 $chunkMetrics = $chunk->metrics ?? [];
                 $metrics['extract'] += (float) ($chunkMetrics['extract'] ?? 0.0);
                 $metrics['validate_header'] += (float) ($chunkMetrics['validate_header'] ?? 0.0);
@@ -130,6 +111,28 @@ final class FinalizeOperationCsvImportRunJob implements ShouldQueue
                 foreach (array_keys($persistBreakdown) as $key) {
                     $metrics['persist_breakdown'][$key] += (float) ($chunkPersistBreakdown[$key] ?? 0.0);
                 }
+            }
+
+            if ($hasFailedChunk) {
+                $firstFailureMessage = $chunks
+                    ->first(fn (OperationImportRunChunk $chunk): bool => $chunk->status === OperationImportRunChunk::STATUS_FAILED)
+                    ?->failure_message;
+
+                $run->forceFill([
+                    'status' => OperationImportRun::STATUS_FAILED,
+                    'total_rows' => $totalRows,
+                    'imported_rows' => $importedRows,
+                    'rejected_rows' => $rejectedRows,
+                    'error_summary' => $errorSummary,
+                    'metrics' => $metrics,
+                    'failure_message' => $firstFailureMessage,
+                    'error_code' => OperationImportRun::ERROR_CODE_UNEXPECTED,
+                    'finished_at' => now(),
+                ])->save();
+
+                $this->notifyRequestedByUser($run);
+
+                return;
             }
 
             $run->forceFill([

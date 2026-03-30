@@ -83,7 +83,7 @@ Um arquivo `Makefile` foi criado para facilitar a configuração do ambiente.
 5. Execute `make composer CMD='install'` para instalar as dependências do PHP/Laravel.
 6. Execute `make npm CMD='install'` para instalar as dependências do Node.js.
 7. Execute `make artisan CMD='key:generate'` para gerar a chave de aplicação do Laravel.
-8. Execute `make artisan CMD='migrate'` para criar as tabelas no banco de dados.
+8. Execute `make artisan CMD='migrate --seed'` para criar as tabelas no banco de dados (com o usuário administrador).
 
 > Os comandos de `composer install` e `npm install` são necessários para preparar o ambiente local.
 
@@ -134,6 +134,8 @@ Resumo da implementação atual (performance):
 - O orquestrador persiste `start_line_number`, `end_line_number` e `start_byte_offset` por chunk (`operation_import_run_chunks`).
 - Cada worker faz `seek` direto para o início do seu trecho no arquivo, evitando releitura completa do CSV nos chunks tardios.
 
+> Importante: mantenha `IMPORT_WORKERS` no `.env` igual ao número de réplicas ativas de `imports-worker` (`--scale imports-worker=N`). Se esses valores divergirem, o planejamento de chunks usa um número e a execução real usa outro.
+
 Fluxo recomendado (worker dedicado):
 
 ```bash
@@ -148,6 +150,8 @@ Para aumentar/reduzir concorrência dos workers:
 make queue-worker-start IMPORT_WORKERS=8
 ```
 
+> Regra operacional: se usar `IMPORT_WORKERS=8`, mantenha o `.env` com `IMPORT_WORKERS=8` e escale `imports-worker` para `8` réplicas.
+
 > Quanto maior `IMPORT_WORKERS`, menor tende a ser o chunk por worker (limitado por CPU/IO/DB).
 
 Fluxo one-shot (execução única/manual):
@@ -159,6 +163,12 @@ make import-run FILE='/caminho/arquivo.csv' REQUESTED_BY_USER_ID='1'
 > Se `requested-by-user-id` for informado, o usuário solicitante recebe notificação no canal `database` ao término da importação.
 
 ### Exportação CSV assíncrona (fila)
+
+Resumo da implementação atual (performance):
+
+- A exportação também usa orquestração por execução (`operation_report_runs`) com chunks dinâmicos.
+- O tamanho de cada chunk de exportação é calculado automaticamente com base em `IMPORT_WORKERS`.
+- Cada chunk é processado em paralelo por job dedicado e consolidado ao final em um único arquivo CSV.
 
 Fluxo recomendado (worker dedicado):
 
@@ -181,6 +191,8 @@ make report-status RUN_ID='12'
 O processamento contínuo da fila `imports` é feito pelo serviço `imports-worker` no `docker-compose`.
 O número de réplicas desse serviço é controlado via `IMPORT_WORKERS` no `Makefile` (padrão: `4`).
 
+> Consistência obrigatória: o valor de `IMPORT_WORKERS` no `.env` deve ser igual ao total de contêineres `imports-worker` em execução.
+
 Comandos operacionais:
 
 ```bash
@@ -192,6 +204,13 @@ make queue-worker-stop
 ```
 
 > O `imports-worker` aguarda o `mysql` ficar saudável antes de iniciar.
+
+Para tentar concluir uma importação com falha de job na fila:
+
+```bash
+make artisan CMD='queue:retry all'
+make import-status RUN_ID='12'
+```
 
 ## 📦 Limites de Upload (UI/API)
 
@@ -265,6 +284,8 @@ O teste será avaliado principalmente nos seguintes aspectos:
 
 - Incluir arquivo csv com os cabeçalhos
   esperados, disponível para download, para o usuário tratar os dados antes de submeter para a aplicação
+
+- Logs de aplicação e auditoria utilizando `Monolog` (para não ter custos significativos de I/O, o Monolog pode enviar logs para o Redis (em memória) e uma ferramenta externa (como Logstash, Fluentd ou um worker próprio com fila/job) consome e persiste os logs).
 
 #### Limitações e "Problemas":
 

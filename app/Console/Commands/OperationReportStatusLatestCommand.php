@@ -35,6 +35,12 @@ class OperationReportStatusLatestCommand extends Command
         $this->line('- finished_at: '.$operationReportRun->finished_at?->format('Y-m-d H:i:s'));
         $this->line('- output_file_path: '.$operationReportRun->output_file_path);
 
+        $totalSeconds = $operationReportRun->metrics['total'] ?? null;
+
+        if (is_numeric($totalSeconds)) {
+            $this->line('- total_seconds: '.number_format((float) $totalSeconds, 4, '.', ''));
+        }
+
         if ($operationReportRun->failure_message !== null) {
             $this->line('- failure_message: '.$operationReportRun->failure_message);
         }

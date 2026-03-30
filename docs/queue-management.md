@@ -19,6 +19,15 @@ O projeto usa fila em banco (`QUEUE_CONNECTION=database`) e o serviço `imports-
 - Cada worker (`ProcessOperationCsvImportChunkJob`) processa somente seu range.
 - O `start_byte_offset` permite `fseek` direto no trecho do worker, evitando releitura do CSV desde o início em chunks tardios.
 - O job `FinalizeOperationCsvImportRunJob` agrega métricas/erros dos chunks e conclui a execução.
+- Em falha infraestrutural de chunk (ex.: erro de banco), o sistema registra auditoria em `operation_import_run_errors` com metadados do chunk e marca linhas de staging pendentes/validadas como `failed`.
+
+## Como a exportação paralela funciona
+
+- O job orquestrador (`ProcessOperationCsvExportJob`) monta o plano de chunks com tamanho dinâmico.
+- O tamanho de chunk considera `IMPORT_WORKERS` para distribuir os registros exportáveis por worker.
+- Cada chunk é processado por `ProcessOperationCsvExportChunkJob`, gerando um arquivo parcial.
+- O `FinalizeOperationCsvExportRunJob` consolida os arquivos parciais em um único CSV final e conclui a execução.
+- O run final agrega métricas (`query`, `write`, `merge`, `total`) para acompanhamento de performance.
 
 ## Por que usar um serviço separado no docker-compose?
 
@@ -28,6 +37,8 @@ Sim, é necessário para o fluxo assíncrono ficar estável no ambiente local:
 - o worker precisa reiniciar automaticamente em caso de falha (`restart: unless-stopped`);
 - separar `app` e `imports-worker` facilita logs, operação e troubleshooting;
 - o serviço `imports-worker` pode ser escalado via `Makefile` com `IMPORT_WORKERS`.
+
+> Regra de consistência: `IMPORT_WORKERS` no `.env` deve ser igual ao número de réplicas ativas de `imports-worker`.
 
 ## Comandos e responsabilidades
 
@@ -52,6 +63,8 @@ make queue-worker-stop
 
 > Exemplo de comando gerado pelo `Makefile`: `IMPORT_WORKERS=8 docker compose up -d app mysql imports-worker --scale imports-worker=8`.
 
+> Mantenha os dois lados com o mesmo número: `IMPORT_WORKERS` (config do app/chunk plan) e `--scale imports-worker` (concorrência real de processamento).
+
 ## Fluxo recomendado (contínuo)
 
 ### Importação CSV
@@ -67,6 +80,8 @@ Para ajustar a concorrência dos workers em importações grandes:
 ```bash
 make queue-worker-start IMPORT_WORKERS=8
 ```
+
+> Ao alterar para `8`, atualize também o `.env` para `IMPORT_WORKERS=8` antes de iniciar/reiniciar os workers.
 
 > Dica: escale gradualmente (ex.: 4 → 8 → 12) e monitore `mysql`/CPU/IO para achar o ponto de melhor throughput.
 
@@ -117,11 +132,29 @@ Esse erro normalmente acontece quando o worker sobe antes do MySQL aceitar conex
 
 Também mantenha `DB_QUEUE_RETRY_AFTER` maior que o `timeout` do job. Neste projeto: `timeout=120` e `DB_QUEUE_RETRY_AFTER=150`.
 
+Se houver divergência entre `.env` e quantidade de réplicas (ex.: `.env=5` e `imports-worker=10`), alinhe e reinicie:
+
+```bash
+make queue-worker-start IMPORT_WORKERS=8
+make artisan CMD='queue:restart --no-interaction'
+make artisan CMD='config:show imports.parallel_workers'
+make queue-worker-status
+```
+
 Se houver jobs falhados e você quiser limpar tudo:
 
 ```bash
 make artisan CMD='queue:flush'
 ```
+
+Para tentar concluir uma importação que falhou por job na fila (ex.: deadlock após esgotar tentativas), reprocese os jobs falhados:
+
+```bash
+make artisan CMD='queue:retry all'
+make import-status RUN_ID='12'
+```
+
+Se a execução já estiver marcada como `failed` e finalizada, esse retry não reabre o run; nesse caso, reenvie o CSV com `make import FILE='/caminho/arquivo.csv'`.
 
 ## Referências
 

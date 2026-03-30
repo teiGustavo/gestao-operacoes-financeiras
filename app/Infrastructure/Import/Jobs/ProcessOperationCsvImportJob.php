@@ -12,11 +12,14 @@ use Illuminate\Contracts\Queue\ShouldBeUnique;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Str;
 use Throwable;
 
 final class ProcessOperationCsvImportJob implements ShouldBeUnique, ShouldQueue
 {
     use Queueable;
+
+    private const int MAX_PERSISTED_MESSAGE_LENGTH = 1_500;
 
     public int $tries = 3;
 
@@ -103,7 +106,7 @@ final class ProcessOperationCsvImportJob implements ShouldBeUnique, ShouldQueue
         } catch (Throwable $throwable) {
             $operationImportRun->forceFill([
                 'status' => OperationImportRun::STATUS_FAILED,
-                'failure_message' => $throwable->getMessage(),
+                'failure_message' => $this->normalizeFailureMessage($throwable->getMessage()),
                 'error_code' => OperationImportRun::ERROR_CODE_UNEXPECTED,
                 'finished_at' => now(),
             ])->save();
@@ -169,7 +172,7 @@ final class ProcessOperationCsvImportJob implements ShouldBeUnique, ShouldQueue
 
         $operationImportRun->forceFill([
             'status' => OperationImportRun::STATUS_FAILED,
-            'failure_message' => $throwable?->getMessage(),
+            'failure_message' => $this->normalizeFailureMessage($throwable?->getMessage()),
             'error_code' => OperationImportRun::ERROR_CODE_UNEXPECTED,
             'finished_at' => now(),
         ])->save();
@@ -189,5 +192,22 @@ final class ProcessOperationCsvImportJob implements ShouldBeUnique, ShouldQueue
         $workers = (int) config('imports.parallel_workers', 4);
 
         return max(1, $workers);
+    }
+
+    private function normalizeFailureMessage(?string $message): string
+    {
+        $normalized = trim((string) $message);
+
+        if ($normalized === '') {
+            return 'falha inesperada durante o processamento da importacao';
+        }
+
+        $normalized = preg_replace('/\s*\(Connection:\s.*$/', '', $normalized) ?? $normalized;
+
+        if (mb_strlen($normalized) <= self::MAX_PERSISTED_MESSAGE_LENGTH) {
+            return $normalized;
+        }
+
+        return Str::limit($normalized, self::MAX_PERSISTED_MESSAGE_LENGTH, '...[truncated]');
     }
 }

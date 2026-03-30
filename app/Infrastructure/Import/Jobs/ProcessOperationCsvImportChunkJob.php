@@ -6,16 +6,22 @@ namespace App\Infrastructure\Import\Jobs;
 
 use App\Infrastructure\Import\OperationCsvImporter;
 use App\Models\OperationImportRunChunk;
+use App\Models\OperationImportRunError;
+use App\Models\OperationImportStagingRow;
 use Illuminate\Contracts\Queue\ShouldBeUnique;
 use Illuminate\Contracts\Queue\ShouldQueue;
+use Illuminate\Database\QueryException;
 use Illuminate\Foundation\Queue\Queueable;
+use Illuminate\Support\Str;
 use Throwable;
 
 final class ProcessOperationCsvImportChunkJob implements ShouldBeUnique, ShouldQueue
 {
     use Queueable;
 
-    public int $tries = 3;
+    private const int MAX_PERSISTED_MESSAGE_LENGTH = 1_500;
+
+    public int $tries = 8;
 
     public int $timeout = 120;
 
@@ -31,7 +37,7 @@ final class ProcessOperationCsvImportChunkJob implements ShouldBeUnique, ShouldQ
      */
     public function backoff(): array
     {
-        return [1, 5, 10];
+        return [1, 5, 10, 20, 40, 60, 90, 120];
     }
 
     public function handle(OperationCsvImporter $operationCsvImporter): void
@@ -76,11 +82,27 @@ final class ProcessOperationCsvImportChunkJob implements ShouldBeUnique, ShouldQ
                 'failure_message' => null,
             ])->save();
         } catch (Throwable $throwable) {
+            $failureMessage = $this->normalizeFailureMessage($throwable->getMessage());
+
+            if ($this->isRetryableInfrastructureFailure($throwable)) {
+                $chunk->forceFill([
+                    'status' => OperationImportRunChunk::STATUS_PENDING,
+                    'failure_message' => $failureMessage,
+                    'finished_at' => null,
+                ])->save();
+
+                $this->recordRetryAttemptFailure($chunk, $failureMessage);
+
+                throw $throwable;
+            }
+
             $chunk->forceFill([
                 'status' => OperationImportRunChunk::STATUS_FAILED,
-                'failure_message' => $throwable->getMessage(),
+                'failure_message' => $failureMessage,
                 'finished_at' => now(),
             ])->save();
+
+            $this->recordInfrastructureFailure($chunk, $failureMessage);
 
             throw $throwable;
         } finally {
@@ -104,11 +126,91 @@ final class ProcessOperationCsvImportChunkJob implements ShouldBeUnique, ShouldQ
         if ($chunk->status !== OperationImportRunChunk::STATUS_FAILED) {
             $chunk->forceFill([
                 'status' => OperationImportRunChunk::STATUS_FAILED,
-                'failure_message' => $throwable?->getMessage(),
+                'failure_message' => $this->normalizeFailureMessage($throwable?->getMessage()),
                 'finished_at' => now(),
             ])->save();
+
+            $this->recordInfrastructureFailure($chunk, $this->normalizeFailureMessage($throwable?->getMessage()));
         }
 
         dispatch(new FinalizeOperationCsvImportRunJob($chunk->operation_import_run_id));
+    }
+
+    private function recordInfrastructureFailure(OperationImportRunChunk $chunk, ?string $message): void
+    {
+        $failureMessage = $message ?? 'falha desconhecida ao processar chunk';
+
+        OperationImportRunError::query()->create([
+            'operation_import_run_id' => $chunk->operation_import_run_id,
+            'line_number' => null,
+            'message' => sprintf('chunk %d [%d-%d]: %s', $chunk->chunk_index, $chunk->start_line_number, $chunk->end_line_number, $failureMessage),
+            'row_payload' => [
+                'chunk_id' => $chunk->id,
+                'chunk_index' => $chunk->chunk_index,
+                'start_line_number' => $chunk->start_line_number,
+                'end_line_number' => $chunk->end_line_number,
+            ],
+        ]);
+
+        OperationImportStagingRow::query()
+            ->where('operation_import_run_id', $chunk->operation_import_run_id)
+            ->whereBetween('line_number', [$chunk->start_line_number, $chunk->end_line_number])
+            ->whereIn('status', [
+                OperationImportStagingRow::STATUS_PENDING,
+                OperationImportStagingRow::STATUS_VALIDATED,
+            ])
+            ->update([
+                'status' => OperationImportStagingRow::STATUS_FAILED,
+                'error_message' => $failureMessage,
+                'processed_at' => now(),
+            ]);
+    }
+
+    private function recordRetryAttemptFailure(OperationImportRunChunk $chunk, string $failureMessage): void
+    {
+        OperationImportRunError::query()->create([
+            'operation_import_run_id' => $chunk->operation_import_run_id,
+            'line_number' => null,
+            'message' => sprintf('chunk %d [%d-%d] retrying: %s', $chunk->chunk_index, $chunk->start_line_number, $chunk->end_line_number, $failureMessage),
+            'row_payload' => [
+                'chunk_id' => $chunk->id,
+                'chunk_index' => $chunk->chunk_index,
+                'start_line_number' => $chunk->start_line_number,
+                'end_line_number' => $chunk->end_line_number,
+                'attempt' => $this->attempts(),
+                'will_retry' => true,
+            ],
+        ]);
+    }
+
+    private function isRetryableInfrastructureFailure(Throwable $throwable): bool
+    {
+        if (! $throwable instanceof QueryException) {
+            return false;
+        }
+
+        $sqlState = (string) ($throwable->errorInfo[0] ?? '');
+        $driverCode = (int) ($throwable->errorInfo[1] ?? 0);
+
+        return in_array($sqlState, ['40001', 'HY000'], true)
+            && in_array($driverCode, [1205, 1213], true);
+    }
+
+    private function normalizeFailureMessage(?string $message): string
+    {
+        $normalized = trim((string) $message);
+
+        if ($normalized === '') {
+            return 'falha desconhecida ao processar chunk';
+        }
+
+        // Drop giant SQL payloads to keep audit rows lightweight and IDE-safe.
+        $normalized = preg_replace('/\s*\(Connection:\s.*$/', '', $normalized) ?? $normalized;
+
+        if (mb_strlen($normalized) <= self::MAX_PERSISTED_MESSAGE_LENGTH) {
+            return $normalized;
+        }
+
+        return Str::limit($normalized, self::MAX_PERSISTED_MESSAGE_LENGTH, '...[truncated]');
     }
 }

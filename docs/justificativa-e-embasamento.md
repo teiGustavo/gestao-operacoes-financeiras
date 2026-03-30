@@ -221,6 +221,8 @@ devido ao "compartilhamento" de seus Enums internos
 (a biblioteca por ser amplamente utilizada, serviu de base para a melhoria na API da
 `BCMath`).
 
+> Considere que a `BCMath\Number` não foi utilizada para simplificar (falta de tempo).
+
 ---
 
 ### Problema 02 - Processamento de arquivos Excel/CSV

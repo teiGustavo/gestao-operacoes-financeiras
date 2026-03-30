@@ -7,6 +7,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 #[Fillable([
     'status',
@@ -18,6 +19,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
     'started_at',
     'finished_at',
     'total_rows',
+    'metrics',
     'failure_message',
     'error_code',
 ])]
@@ -64,6 +66,7 @@ class OperationReportRun extends Model
             'queued_at' => 'datetime',
             'started_at' => 'datetime',
             'finished_at' => 'datetime',
+            'metrics' => 'array',
             'error_code' => 'string',
         ];
     }
@@ -74,5 +77,13 @@ class OperationReportRun extends Model
     public function requestedByUser(): BelongsTo
     {
         return $this->belongsTo(User::class, 'requested_by_user_id');
+    }
+
+    /**
+     * @return HasMany<OperationReportRunChunk, $this>
+     */
+    public function chunks(): HasMany
+    {
+        return $this->hasMany(OperationReportRunChunk::class);
     }
 }

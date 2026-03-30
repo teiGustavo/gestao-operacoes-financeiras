@@ -32,6 +32,9 @@ final class OperationImportPersistenceEloquentMysqlQuery
             ];
         }
 
+        // Deterministic ordering reduces lock-order variance across concurrent workers.
+        ksort($clientsByCpf);
+
         Client::query()->upsert(
             array_values($clientsByCpf),
             ['cpf'],
@@ -59,6 +62,9 @@ final class OperationImportPersistenceEloquentMysqlQuery
                 'updated_at' => $timestamp,
             ];
         }
+
+        // Keep a stable lock acquisition order for concurrent upserts.
+        ksort($agreementRows);
 
         if ($agreementRows !== []) {
             Agreement::query()->upsert(

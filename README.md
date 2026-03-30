@@ -1,5 +1,17 @@
 # Sistema de Processamento e Gestão de Operações Financeiras
 
+>**DISCLAIMER**: Todas as decisões foram tomadas de forma consciente e com base em 
+  análises técnicas, mas o código não deve ser considerado como um produto finalizado
+  ou pronto para produção. 
+  O objetivo principal deste projeto é demonstrar habilidades técnicas, sendo assim
+  algumas escolhas foram feitas visando a clareza e a demonstração de boas práticas,
+  mesmo que isso não seja possível em todas as situações cotidianas (devido à prazo, 
+  escopo, padrões já estabelecidos, base legada e etc).
+>  
+> **Resumindo: O teste foi tratado como prova de fogo, a fim de demonstrar as minhas
+  capacidades técnicas, o que não torna minhas decisões menos acertadas. Para mais 
+  detalhes, verifique o arquivo de [Justificativa e Embasamento](./docs/justificativa-e-embasamento.md).** 
+
 ---
 
 ## 📋 Sobre o Projeto

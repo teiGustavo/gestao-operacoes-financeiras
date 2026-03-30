@@ -31,9 +31,11 @@ it('notifies requested user when import completes successfully', function () {
     $notification = Notification::sent($user, OperationImportFinishedNotification::class)->first();
 
     expect($run->status)->toBe(OperationImportRun::STATUS_COMPLETED)
+        ->and($run->error_code)->toBeNull()
         ->and($notification)->not->toBeNull()
         ->and($notification->toArray($user)['run_id'])->toBe($run->id)
-        ->and($notification->toArray($user)['status'])->toBe(OperationImportRun::STATUS_COMPLETED);
+        ->and($notification->toArray($user)['status'])->toBe(OperationImportRun::STATUS_COMPLETED)
+        ->and($notification->toArray($user)['error_code'])->toBeNull();
 });
 
 it('notifies requested user when import completes with row errors', function () {
@@ -58,10 +60,12 @@ it('notifies requested user when import completes with row errors', function () 
     $notification = Notification::sent($user, OperationImportFinishedNotification::class)->first();
 
     expect($run->status)->toBe(OperationImportRun::STATUS_COMPLETED_WITH_ERRORS)
+        ->and($run->error_code)->toBeNull()
         ->and($notification)->not->toBeNull()
         ->and($notification->toArray($user)['run_id'])->toBe($run->id)
         ->and($notification->toArray($user)['status'])->toBe(OperationImportRun::STATUS_COMPLETED_WITH_ERRORS)
-        ->and($notification->toArray($user)['rejected_rows'])->toBe(1);
+        ->and($notification->toArray($user)['rejected_rows'])->toBe(1)
+        ->and($notification->toArray($user)['error_code'])->toBeNull();
 });
 
 it('notifies requested user when import fails', function () {
@@ -84,10 +88,12 @@ it('notifies requested user when import fails', function () {
     $notification = Notification::sent($user, OperationImportFinishedNotification::class)->first();
 
     expect($run->status)->toBe(OperationImportRun::STATUS_FAILED)
+        ->and($run->error_code)->toBe(OperationImportRun::ERROR_CODE_UNEXPECTED)
         ->and($notification)->not->toBeNull()
         ->and($notification->toArray($user)['run_id'])->toBe($run->id)
         ->and($notification->toArray($user)['status'])->toBe(OperationImportRun::STATUS_FAILED)
-        ->and($notification->toArray($user)['failure_message'])->not->toBeNull();
+        ->and($notification->toArray($user)['failure_message'])->not->toBeNull()
+        ->and($notification->toArray($user)['error_code'])->toBe(OperationImportRun::ERROR_CODE_UNEXPECTED);
 });
 
 it('does not notify when run has no requested user', function () {

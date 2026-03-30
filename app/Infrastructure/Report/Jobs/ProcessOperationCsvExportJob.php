@@ -44,6 +44,7 @@ final class ProcessOperationCsvExportJob implements ShouldBeUnique, ShouldQueue
                 'status' => OperationReportRun::STATUS_PROCESSING,
                 'started_at' => now(),
                 'failure_message' => null,
+                'error_code' => null,
             ]);
 
         if ($claimed === 0) {
@@ -69,6 +70,7 @@ final class ProcessOperationCsvExportJob implements ShouldBeUnique, ShouldQueue
                 'output_file_path' => $summary['output_file_path'],
                 'total_rows' => $summary['total_rows'],
                 'finished_at' => now(),
+                'error_code' => null,
             ])->save();
 
             $this->notifyRequestedByUser($operationReportRun);
@@ -76,6 +78,7 @@ final class ProcessOperationCsvExportJob implements ShouldBeUnique, ShouldQueue
             $operationReportRun->forceFill([
                 'status' => OperationReportRun::STATUS_FAILED,
                 'failure_message' => $throwable->getMessage(),
+                'error_code' => OperationReportRun::ERROR_CODE_UNEXPECTED,
                 'finished_at' => now(),
             ])->save();
 
@@ -108,6 +111,7 @@ final class ProcessOperationCsvExportJob implements ShouldBeUnique, ShouldQueue
         $operationReportRun->forceFill([
             'status' => OperationReportRun::STATUS_FAILED,
             'failure_message' => $throwable?->getMessage(),
+            'error_code' => OperationReportRun::ERROR_CODE_UNEXPECTED,
             'finished_at' => now(),
         ])->save();
 

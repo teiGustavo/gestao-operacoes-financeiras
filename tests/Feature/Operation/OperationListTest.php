@@ -52,8 +52,12 @@ it('returns recent import and report runs payload for panel refresh endpoint', f
         ->getJson(route('operations.runs.status'))
         ->assertSuccessful()
         ->assertJsonPath('data.recent_import_runs.0.status', OperationImportRun::STATUS_COMPLETED)
+        ->assertJsonPath('data.recent_import_runs.0.status_label', 'Concluida')
+        ->assertJsonPath('data.recent_import_runs.0.error_code', null)
         ->assertJsonPath('data.recent_import_runs.0.imported_rows', 9)
         ->assertJsonPath('data.recent_report_runs.0.status', OperationReportRun::STATUS_COMPLETED)
+        ->assertJsonPath('data.recent_report_runs.0.status_label', 'Concluido')
+        ->assertJsonPath('data.recent_report_runs.0.error_code', null)
         ->assertJsonPath(
             'data.recent_report_runs.0.download_url',
             route('operations.report.csv.download', ['operationReportRun' => $reportRun->id]),

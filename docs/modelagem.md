@@ -204,7 +204,7 @@ difícil de implementar).
 - `KEY idx_operations_payment_date (payment_date)` ← Partial index (WHERE payment_date IS NOT NULL)
 
 **Constraints de Validação (CHECK):**
-- `CONSTRAINT chk_status CHECK (status IN ('draft', 'pre_analysis', 'under_review', 'awaiting_signature', 'signed', 'approved', 'canceled', 'disbursed'))`
+- `CONSTRAINT chk_status CHECK (status IN ('draft', 'pre_analysis', 'under_review', 'awaiting_signature', 'signature_completed', 'approved', 'canceled', 'disbursed'))`
 - `CONSTRAINT chk_product_type CHECK (product_type IN ('payroll_loan', 'personal_loan'))`
 - `CONSTRAINT chk_requested_value CHECK (requested_value > 0)`
 - `CONSTRAINT chk_disbursement_value CHECK (disbursement_value >= 0)`
@@ -264,7 +264,7 @@ difícil de implementar).
 - `KEY idx_status_histories_operation_changed_at (operation_id, changed_at DESC)` ← Índice composto (suporta busca + ordenação cronológica)
 
 **Constraints de Validação (CHECK):**
-- `CONSTRAINT chk_status_history_values CHECK (previous_status IN ('draft', 'pre_analysis', 'under_review', 'awaiting_signature', 'signed', 'approved', 'canceled', 'disbursed', NULL) AND new_status IN ('draft', 'pre_analysis', 'under_review', 'awaiting_signature', 'signed', 'approved', 'canceled', 'disbursed'))`
+- `CONSTRAINT chk_status_history_values CHECK (previous_status IN ('draft', 'pre_analysis', 'under_review', 'awaiting_signature', 'signature_completed', 'approved', 'canceled', 'disbursed', NULL) AND new_status IN ('draft', 'pre_analysis', 'under_review', 'awaiting_signature', 'signature_completed', 'approved', 'canceled', 'disbursed'))`
 - `CONSTRAINT chk_status_not_equal CHECK (previous_status IS NULL OR previous_status != new_status)`
 
 **Foreign Keys:**
@@ -313,6 +313,7 @@ difícil de implementar).
 - `error_summary`: JSON, Nullable
 - `metrics`: JSON, Nullable
 - `failure_message`: Text, Nullable
+- `error_code`: Varchar(255), Nullable
 - `created_at`: Timestamp, Default=CURRENT_TIMESTAMP
 - `updated_at`: Timestamp, Default=CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 
@@ -389,6 +390,7 @@ difícil de implementar).
 - `finished_at`: Timestamp, Nullable
 - `total_rows`: Unsigned Int, Default=0, NOT NULL
 - `failure_message`: Text, Nullable
+- `error_code`: Varchar(255), Nullable
 - `created_at`: Timestamp, Default=CURRENT_TIMESTAMP
 - `updated_at`: Timestamp, Default=CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 
@@ -466,7 +468,7 @@ Todos os constraints `CHECK` foram implementados no nível de banco de dados par
     - `pre_analysis` - Pré-Análise
     - `under_review` - Em Análise
     - `awaiting_signature` - Aguardando Assinatura
-    - `signed` - Assinatura Concluída
+    - `signature_completed` - Assinatura Concluída
     - `approved` - Aprovada
     - `canceled` - Cancelada
     - `disbursed`: Pago ao Cliente

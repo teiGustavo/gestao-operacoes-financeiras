@@ -48,6 +48,12 @@ class ImportOperationStatusCommand extends Command
             $this->line('- failure_message: '.$operationImportRun->failure_message);
         }
 
+        $errorCode = $operationImportRun->resolvedErrorCode();
+
+        if ($errorCode !== null) {
+            $this->line('- error_code: '.$errorCode);
+        }
+
         return self::SUCCESS;
     }
 }

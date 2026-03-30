@@ -44,6 +44,7 @@ final class ProcessOperationCsvImportJob implements ShouldBeUnique, ShouldQueue
                 'status' => OperationImportRun::STATUS_PROCESSING,
                 'started_at' => now(),
                 'failure_message' => null,
+                'error_code' => null,
             ]);
 
         if ($claimed === 0) {
@@ -68,6 +69,7 @@ final class ProcessOperationCsvImportJob implements ShouldBeUnique, ShouldQueue
                 'error_summary' => $summary['error_summary'],
                 'metrics' => $summary['metrics'],
                 'finished_at' => now(),
+                'error_code' => null,
             ])->save();
 
             $this->notifyRequestedByUser($operationImportRun);
@@ -75,6 +77,7 @@ final class ProcessOperationCsvImportJob implements ShouldBeUnique, ShouldQueue
             $operationImportRun->forceFill([
                 'status' => OperationImportRun::STATUS_FAILED,
                 'failure_message' => $throwable->getMessage(),
+                'error_code' => OperationImportRun::ERROR_CODE_UNEXPECTED,
                 'finished_at' => now(),
             ])->save();
 
@@ -107,6 +110,7 @@ final class ProcessOperationCsvImportJob implements ShouldBeUnique, ShouldQueue
         $operationImportRun->forceFill([
             'status' => OperationImportRun::STATUS_FAILED,
             'failure_message' => $throwable?->getMessage(),
+            'error_code' => OperationImportRun::ERROR_CODE_UNEXPECTED,
             'finished_at' => now(),
         ])->save();
 

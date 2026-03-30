@@ -19,6 +19,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
     'finished_at',
     'total_rows',
     'failure_message',
+    'error_code',
 ])]
 class OperationReportRun extends Model
 {
@@ -29,6 +30,28 @@ class OperationReportRun extends Model
     public const string STATUS_COMPLETED = 'completed';
 
     public const string STATUS_FAILED = 'failed';
+
+    public const string ERROR_CODE_UNEXPECTED = 'UNEXPECTED_ERROR';
+
+    public function statusLabel(): string
+    {
+        return match ($this->status) {
+            self::STATUS_PENDING => 'Pendente',
+            self::STATUS_PROCESSING => 'Processando',
+            self::STATUS_COMPLETED => 'Concluido',
+            self::STATUS_FAILED => 'Falhou',
+            default => 'Desconhecido',
+        };
+    }
+
+    public function resolvedErrorCode(): ?string
+    {
+        if ($this->status !== self::STATUS_FAILED) {
+            return null;
+        }
+
+        return $this->error_code ?? self::ERROR_CODE_UNEXPECTED;
+    }
 
     /**
      * @return array<string, string>
@@ -41,6 +64,7 @@ class OperationReportRun extends Model
             'queued_at' => 'datetime',
             'started_at' => 'datetime',
             'finished_at' => 'datetime',
+            'error_code' => 'string',
         ];
     }
 

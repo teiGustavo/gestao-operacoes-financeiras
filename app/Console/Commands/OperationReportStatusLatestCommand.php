@@ -39,6 +39,12 @@ class OperationReportStatusLatestCommand extends Command
             $this->line('- failure_message: '.$operationReportRun->failure_message);
         }
 
+        $errorCode = $operationReportRun->resolvedErrorCode();
+
+        if ($errorCode !== null) {
+            $this->line('- error_code: '.$errorCode);
+        }
+
         return self::SUCCESS;
     }
 }

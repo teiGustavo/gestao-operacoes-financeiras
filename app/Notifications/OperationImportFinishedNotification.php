@@ -34,6 +34,7 @@ class OperationImportFinishedNotification extends Notification
         return [
             'run_id' => $this->operationImportRun->id,
             'status' => $this->operationImportRun->status,
+            'error_code' => $this->operationImportRun->resolvedErrorCode(),
             'total_rows' => $this->operationImportRun->total_rows,
             'imported_rows' => $this->operationImportRun->imported_rows,
             'rejected_rows' => $this->operationImportRun->rejected_rows,

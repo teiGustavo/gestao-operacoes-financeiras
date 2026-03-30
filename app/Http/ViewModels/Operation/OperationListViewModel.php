@@ -26,8 +26,8 @@ final class OperationListViewModel
      *     statusBlockedReasonsByCurrentStatus: array<string, array<string, string>>,
      *     productOptions: array<string, string>,
      *     agreementOptions: array<int, string>,
-     *     recentImportRuns: list<array{id:int,status:string,status_label:string,total_rows:int,imported_rows:int,rejected_rows:int,finished_at:string|null,failure_message:string|null}>,
-     *     recentReportRuns: list<array{id:int,status:string,status_label:string,total_rows:int,finished_at:string|null,download_url:string|null,failure_message:string|null}>
+     *     recentImportRuns: list<array{id:int,status:string,status_label:string,total_rows:int,imported_rows:int,rejected_rows:int,finished_at:string|null,failure_message:string|null,error_code:string|null}>,
+     *     recentReportRuns: list<array{id:int,status:string,status_label:string,total_rows:int,finished_at:string|null,download_url:string|null,failure_message:string|null,error_code:string|null}>
      * }
      */
     public function toArray(
@@ -104,7 +104,7 @@ final class OperationListViewModel
     }
 
     /**
-     * @return list<array{id:int,status:string,status_label:string,total_rows:int,imported_rows:int,rejected_rows:int,finished_at:string|null,failure_message:string|null}>
+     * @return list<array{id:int,status:string,status_label:string,total_rows:int,imported_rows:int,rejected_rows:int,finished_at:string|null,failure_message:string|null,error_code:string|null}>
      */
     public function formatRecentImportRuns(?Collection $importRuns): array
     {
@@ -112,18 +112,19 @@ final class OperationListViewModel
             return [
                 'id' => $operationImportRun->id,
                 'status' => $operationImportRun->status,
-                'status_label' => $this->importStatusLabel((string) $operationImportRun->status),
+                'status_label' => $operationImportRun->statusLabel(),
                 'total_rows' => (int) $operationImportRun->total_rows,
                 'imported_rows' => (int) $operationImportRun->imported_rows,
                 'rejected_rows' => (int) $operationImportRun->rejected_rows,
                 'finished_at' => $operationImportRun->finished_at?->format('d/m/Y H:i:s'),
                 'failure_message' => $operationImportRun->failure_message,
+                'error_code' => $operationImportRun->resolvedErrorCode(),
             ];
         })->values()->all() ?? [];
     }
 
     /**
-     * @return list<array{id:int,status:string,status_label:string,total_rows:int,finished_at:string|null,download_url:string|null,failure_message:string|null}>
+     * @return list<array{id:int,status:string,status_label:string,total_rows:int,finished_at:string|null,download_url:string|null,failure_message:string|null,error_code:string|null}>
      */
     public function formatRecentReportRuns(?Collection $reportRuns): array
     {
@@ -131,37 +132,15 @@ final class OperationListViewModel
             return [
                 'id' => $operationReportRun->id,
                 'status' => $operationReportRun->status,
-                'status_label' => $this->statusLabel((string) $operationReportRun->status),
+                'status_label' => $operationReportRun->statusLabel(),
                 'total_rows' => (int) $operationReportRun->total_rows,
                 'finished_at' => $operationReportRun->finished_at?->format('d/m/Y H:i:s'),
                 'download_url' => $operationReportRun->status === OperationReportRun::STATUS_COMPLETED
                     ? route('operations.report.csv.download', ['operationReportRun' => $operationReportRun->id])
                     : null,
                 'failure_message' => $operationReportRun->failure_message,
+                'error_code' => $operationReportRun->resolvedErrorCode(),
             ];
         })->values()->all() ?? [];
-    }
-
-    private function statusLabel(string $status): string
-    {
-        return match ($status) {
-            OperationReportRun::STATUS_PENDING => 'Pendente',
-            OperationReportRun::STATUS_PROCESSING => 'Processando',
-            OperationReportRun::STATUS_COMPLETED => 'Concluido',
-            OperationReportRun::STATUS_FAILED => 'Falhou',
-            default => 'Desconhecido',
-        };
-    }
-
-    private function importStatusLabel(string $status): string
-    {
-        return match ($status) {
-            OperationImportRun::STATUS_PENDING => 'Pendente',
-            OperationImportRun::STATUS_PROCESSING => 'Processando',
-            OperationImportRun::STATUS_COMPLETED => 'Concluida',
-            OperationImportRun::STATUS_COMPLETED_WITH_ERRORS => 'Concluida com erros',
-            OperationImportRun::STATUS_FAILED => 'Falhou',
-            default => 'Desconhecido',
-        };
     }
 }

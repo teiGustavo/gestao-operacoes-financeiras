@@ -37,3 +37,20 @@ it('fails when import run does not exist', function () {
         ->expectsOutputToContain('nao encontrado')
         ->assertFailed();
 });
+
+it('shows fallback error code when failed import run has no stored code', function () {
+    $run = OperationImportRun::query()->create([
+        'file_path' => '/tmp/failed.csv',
+        'status' => OperationImportRun::STATUS_FAILED,
+        'queued_at' => now()->subMinute(),
+        'started_at' => now()->subSeconds(50),
+        'finished_at' => now(),
+        'failure_message' => 'falha simulada',
+    ]);
+
+    $this->artisan('operations:import:status', ['run_id' => $run->id])
+        ->expectsOutputToContain('- status: '.OperationImportRun::STATUS_FAILED)
+        ->expectsOutputToContain('- failure_message: falha simulada')
+        ->expectsOutputToContain('- error_code: '.OperationImportRun::ERROR_CODE_UNEXPECTED)
+        ->assertSuccessful();
+});

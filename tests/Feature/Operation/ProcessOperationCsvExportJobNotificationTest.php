@@ -91,8 +91,12 @@ it('processes queued report export, stores csv, and notifies requester', functio
         ->and($csvContent)->toContain('212.10');
 
     Notification::assertSentTo($user, OperationReportFinishedNotification::class, function (OperationReportFinishedNotification $notification) use ($reportRun, $user): bool {
+        $payload = $notification->toArray($user);
+
         return ($notification->toArray($user)['run_id'] ?? null) === $reportRun->id
-            && ($notification->toArray($user)['status'] ?? null) === OperationReportRun::STATUS_COMPLETED;
+            && ($notification->toArray($user)['status'] ?? null) === OperationReportRun::STATUS_COMPLETED
+            && array_key_exists('error_code', $payload)
+            && $payload['error_code'] === null;
     });
 });
 

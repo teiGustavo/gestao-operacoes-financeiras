@@ -36,3 +36,25 @@ it('fails when report run is not found by id', function () {
         ->expectsOutputToContain('report run 999999 nao encontrado')
         ->assertFailed();
 });
+
+it('shows fallback error code when failed report run has no stored code', function () {
+    $user = User::factory()->create();
+
+    $reportRun = OperationReportRun::query()->create([
+        'status' => OperationReportRun::STATUS_FAILED,
+        'requested_by_user_id' => $user->id,
+        'reference_date' => '2026-06-30',
+        'queued_at' => now()->subMinute(),
+        'started_at' => now()->subSeconds(50),
+        'finished_at' => now(),
+        'total_rows' => 0,
+        'output_file_path' => null,
+        'failure_message' => 'falha simulada report',
+    ]);
+
+    $this->artisan('operations:report:status', ['run_id' => (string) $reportRun->id])
+        ->expectsOutputToContain('- status: '.OperationReportRun::STATUS_FAILED)
+        ->expectsOutputToContain('- failure_message: falha simulada report')
+        ->expectsOutputToContain('- error_code: '.OperationReportRun::ERROR_CODE_UNEXPECTED)
+        ->assertSuccessful();
+});

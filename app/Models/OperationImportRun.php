@@ -22,6 +22,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
     'error_summary',
     'metrics',
     'failure_message',
+    'error_code',
 ])]
 class OperationImportRun extends Model
 {
@@ -35,6 +36,29 @@ class OperationImportRun extends Model
 
     public const string STATUS_FAILED = 'failed';
 
+    public const string ERROR_CODE_UNEXPECTED = 'UNEXPECTED_ERROR';
+
+    public function statusLabel(): string
+    {
+        return match ($this->status) {
+            self::STATUS_PENDING => 'Pendente',
+            self::STATUS_PROCESSING => 'Processando',
+            self::STATUS_COMPLETED => 'Concluida',
+            self::STATUS_COMPLETED_WITH_ERRORS => 'Concluida com erros',
+            self::STATUS_FAILED => 'Falhou',
+            default => 'Desconhecido',
+        };
+    }
+
+    public function resolvedErrorCode(): ?string
+    {
+        if ($this->status !== self::STATUS_FAILED) {
+            return null;
+        }
+
+        return $this->error_code ?? self::ERROR_CODE_UNEXPECTED;
+    }
+
     /**
      * @return array<string, string>
      */
@@ -46,6 +70,7 @@ class OperationImportRun extends Model
             'finished_at' => 'datetime',
             'error_summary' => 'array',
             'metrics' => 'array',
+            'error_code' => 'string',
         ];
     }
 

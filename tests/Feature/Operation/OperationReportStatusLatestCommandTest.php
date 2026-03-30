@@ -41,6 +41,7 @@ it('shows latest operation report run status details', function () {
         ->expectsOutputToContain('- total_rows: 10')
         ->expectsOutputToContain('- output_file_path:')
         ->expectsOutputToContain('- failure_message: falha simulada')
+        ->expectsOutputToContain('- error_code: '.OperationReportRun::ERROR_CODE_UNEXPECTED)
         ->assertSuccessful();
 });
 

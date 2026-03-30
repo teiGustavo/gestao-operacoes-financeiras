@@ -34,6 +34,7 @@ class OperationReportFinishedNotification extends Notification
         return [
             'run_id' => $this->operationReportRun->id,
             'status' => $this->operationReportRun->status,
+            'error_code' => $this->operationReportRun->resolvedErrorCode(),
             'total_rows' => $this->operationReportRun->total_rows,
             'output_file_path' => $this->operationReportRun->output_file_path,
             'failure_message' => $this->operationReportRun->failure_message,

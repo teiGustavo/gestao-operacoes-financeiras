@@ -44,3 +44,25 @@ it('fails when there is no import run to show latest status', function () {
         ->expectsOutputToContain('nenhuma importacao encontrada')
         ->assertFailed();
 });
+
+it('shows fallback error code for latest failed import run', function () {
+    OperationImportRun::query()->create([
+        'file_path' => '/tmp/older.csv',
+        'status' => OperationImportRun::STATUS_COMPLETED,
+    ]);
+
+    OperationImportRun::query()->create([
+        'file_path' => '/tmp/latest-failed.csv',
+        'status' => OperationImportRun::STATUS_FAILED,
+        'queued_at' => now()->subMinute(),
+        'started_at' => now()->subSeconds(50),
+        'finished_at' => now(),
+        'failure_message' => 'falha simulada latest',
+    ]);
+
+    $this->artisan('operations:import:status-latest')
+        ->expectsOutputToContain('- status: '.OperationImportRun::STATUS_FAILED)
+        ->expectsOutputToContain('- failure_message: falha simulada latest')
+        ->expectsOutputToContain('- error_code: '.OperationImportRun::ERROR_CODE_UNEXPECTED)
+        ->assertSuccessful();
+});

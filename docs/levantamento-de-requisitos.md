@@ -111,6 +111,7 @@ Para visualizar os dados iniciais, consulte a
 - Permitir aplicação de múltiplos filtros simultaneamente
 - Manter performance mesmo com grande volume de dados
 - Interface responsiva e intuitiva
+- Separar transformação de dados da camada de view usando Presenter/ViewModel da listagem
 
 #### RF04 - Geração de Relatórios
 **Descrição:** O sistema deve gerar relatórios em formato CSV ou Excel respeitando os filtros aplicados.
@@ -179,6 +180,7 @@ $$
 - Permitir alteração de status conforme regras estabelecidas
 - Exibir todos os dados da operação, cliente e parcelas
 - Interface clara para mudança de status
+- Encapsular a apresentação de dados do detalhe em Presenter/ViewModel dedicado, evitando lógica de formatação nas views.
 
 **Regras de Alteração de Status:**
 1. Uma operação só pode ser marcada como **PAGO AO CLIENTE** se:
@@ -263,7 +265,7 @@ $$
 
 **Critérios:**
 - Código seguindo padrões PSR (PHP Standard Recommendations)
-- Arquitetura MVC bem definida
+- Arquitetura MVC estendida com camada de apresentação (Presenter/ViewModel), inspirada em MVVM
 - Comentários em lógicas complexas
 - Nomenclatura clara de variáveis e métodos
 - Separação de responsabilidades (Services, Repositories, Controllers)

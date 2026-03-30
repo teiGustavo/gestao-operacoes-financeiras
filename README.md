@@ -44,6 +44,8 @@ A pasta `app/` contém os diretórios padrão + separação de camadas, com a mo
 - `app/Application/`: Contém os casos de uso e serviços de aplicação
 - `app/Infrastructure/`: Contém as implementações de acesso a dados e outras integrações
 
+Na camada HTTP, o projeto também adota uma separação explícita de apresentação de dados usando `Presenter/ViewModel` (extensão do MVC inspirada em MVVM), mantendo controllers como orquestradores e views focadas em renderização.
+
 ---
 
 ## 🎯 Objetivos do Sistema

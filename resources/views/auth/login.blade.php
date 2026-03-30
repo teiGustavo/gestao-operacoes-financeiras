@@ -1,33 +1,25 @@
 @extends('layouts.public')
 
-@section('page_title', 'Login')
+@section('page_title', $page['title'])
 
 @section('content')
     <main class="mx-auto flex min-h-screen w-full max-w-md items-center px-6 py-10">
         <div class="w-full rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
-            <h1 class="text-2xl font-semibold">Entrar</h1>
-            <p class="mt-1 text-sm text-slate-600">Acesse com email/nome de usuário e senha.</p>
+            <h1 class="text-2xl font-semibold">{{ $page['heading'] }}</h1>
+            <p class="mt-1 text-sm text-slate-600">{{ $page['subtitle'] }}</p>
 
-            @if (session('status'))
-                <div class="mt-4 rounded-md bg-emerald-50 px-3 py-2 text-sm text-emerald-800">
-                    {{ session('status') }}
-                </div>
-            @endif
+            <x-feedback.alert :message="session('status')" variant="success" />
 
             @if ($demoCredentials['shouldDisplay'])
-                <div class="mt-4 rounded-md border border-blue-200 bg-blue-50 px-3 py-3 text-sm text-blue-900">
+                <x-feedback.alert variant="info" class="py-3">
                     <p class="font-medium">Usuário administrador (desenvolvimento)</p>
                     <p class="mt-1">Nome de Usuário: <span class="font-mono">{{ $demoCredentials['username'] }}</span></p>
                     <p>E-mail: <span class="font-mono">{{ $demoCredentials['email'] }}</span></p>
                     <p>Senha: <span class="font-mono">{{ $demoCredentials['password'] }}</span></p>
-                </div>
+                </x-feedback.alert>
             @endif
 
-            @if ($errors->any())
-                <div class="mt-4 rounded-md bg-red-50 px-3 py-2 text-sm text-red-700">
-                    {{ $errors->first() }}
-                </div>
-            @endif
+            <x-feedback.alert :message="$errors->first()" variant="error" />
 
             <form class="mt-5 space-y-4" method="POST" action="{{ route('login.store') }}">
                 @csrf

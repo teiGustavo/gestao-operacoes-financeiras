@@ -34,6 +34,17 @@ it('lists operations for authenticated users', function () {
         ->getJson(route('operations.index'));
 
     $response->assertSuccessful()
+        ->assertJsonStructure([
+            'data' => [[
+                'operation_code',
+                'client_name',
+                'operation_value',
+                'status' => ['value', 'label'],
+                'product' => ['value', 'label'],
+                'agreement' => ['id', 'name'],
+            ]],
+            'meta' => ['current_page', 'last_page', 'per_page', 'total'],
+        ])
         ->assertJsonPath('meta.total', 1)
         ->assertJsonPath('data.0.client_name', 'Ana Silva')
         ->assertJsonPath('data.0.operation_value', 1500)
@@ -67,6 +78,11 @@ it('renders operations index as a visual pipeline page', function () {
     $this->actingAs($user)
         ->get(route('operations.index', ['status' => OperationStatus::PRE_ANALYSIS->value]))
         ->assertSuccessful()
+        ->assertViewIs('operations.index')
+        ->assertViewHas('operations')
+        ->assertViewHas('filters')
+        ->assertViewHas('statusOptions')
+        ->assertViewHas('productOptions')
         ->assertSee('Esteira de Operacoes')
         ->assertSee('Sair')
         ->assertSee('Aplicar filtros')
@@ -94,7 +110,9 @@ it('updates status from quick action form on operations index', function () {
     );
 
     $this->actingAs($user)
+        ->withSession(['_token' => 'test-csrf-token'])
         ->patch(route('operations.status.update', $operation), [
+            '_token' => 'test-csrf-token',
             'status' => OperationStatus::CANCELED->value,
             'redirect_to' => route('operations.index'),
             'notes' => 'Cancelamento rapido',
@@ -143,6 +161,10 @@ it('applies combined filters on operations index', function () {
         ]));
 
     $response->assertSuccessful()
+        ->assertJsonStructure([
+            'data',
+            'meta' => ['current_page', 'last_page', 'per_page', 'total'],
+        ])
         ->assertJsonCount(1, 'data')
         ->assertJsonPath('meta.total', 1)
         ->assertJsonPath('data.0.operation_code', $expectedOperation->id)
@@ -174,6 +196,10 @@ it('supports pagination with per_page filter', function () {
     $this->actingAs($user)
         ->getJson(route('operations.index', ['per_page' => 1]))
         ->assertSuccessful()
+        ->assertJsonStructure([
+            'data',
+            'meta' => ['current_page', 'last_page', 'per_page', 'total'],
+        ])
         ->assertJsonPath('meta.per_page', 1)
         ->assertJsonPath('meta.total', 2)
         ->assertJsonCount(1, 'data');

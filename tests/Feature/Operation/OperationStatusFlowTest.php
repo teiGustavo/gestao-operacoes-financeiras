@@ -20,10 +20,12 @@ it('requires authentication for operation detail and status update endpoints', f
 
     $this->getJson(route('operations.show', $operation))->assertUnauthorized();
 
-    $this->patchJson(route('operations.status.update', $operation), [
-        'status' => OperationStatus::DISBURSED->value,
-        'payment_date' => '2026-05-02',
-    ])->assertUnauthorized();
+    $this->withSession(['_token' => 'test-csrf-token'])
+        ->patchJson(route('operations.status.update', $operation), [
+            '_token' => 'test-csrf-token',
+            'status' => OperationStatus::DISBURSED->value,
+            'payment_date' => '2026-05-02',
+        ])->assertUnauthorized();
 });
 
 it('returns operation details with status history timeline', function () {
@@ -42,6 +44,16 @@ it('returns operation details with status history timeline', function () {
     $this->actingAs($user)
         ->getJson(route('operations.show', $operation))
         ->assertSuccessful()
+        ->assertJsonStructure([
+            'data' => [
+                'id',
+                'status' => ['value', 'label'],
+                'history' => [[
+                    'new_status',
+                    'changed_by_user' => ['id', 'name'],
+                ]],
+            ],
+        ])
         ->assertJsonPath('data.id', $operation->id)
         ->assertJsonPath('data.status.value', OperationStatus::APPROVED->value)
         ->assertJsonPath('data.history.0.new_status', OperationStatus::APPROVED->value)
@@ -75,6 +87,16 @@ it('returns operation details with installments in json response', function () {
     $this->actingAs($user)
         ->getJson(route('operations.show', $operation))
         ->assertSuccessful()
+        ->assertJsonStructure([
+            'data' => [
+                'id',
+                'installments' => [[
+                    'installment_number',
+                    'paid',
+                    'paid_by_user',
+                ]],
+            ],
+        ])
         ->assertJsonPath('data.installments.0.installment_number', 1)
         ->assertJsonPath('data.installments.0.paid', false)
         ->assertJsonPath('data.installments.1.installment_number', 2)
@@ -89,6 +111,10 @@ it('renders operation details page for authenticated users', function () {
     $this->actingAs($user)
         ->get(route('operations.show', $operation))
         ->assertSuccessful()
+        ->assertViewIs('operations.show')
+        ->assertViewHas('operation')
+        ->assertViewHas('statusSelectability')
+        ->assertViewHas('statusBlockedReasons')
         ->assertSee('Esteira')
         ->assertSee('Sair')
         ->assertSee('Operação #'.$operation->id)
@@ -160,12 +186,18 @@ it('changes status to disbursed and appends history', function () {
     $user = User::factory()->create();
 
     $this->actingAs($user)
+        ->withSession(['_token' => 'test-csrf-token'])
         ->patchJson(route('operations.status.update', $operation), [
+            '_token' => 'test-csrf-token',
             'status' => OperationStatus::DISBURSED->value,
             'notes' => 'Pagamento realizado',
             'payment_date' => '2026-05-02',
         ])
         ->assertSuccessful()
+        ->assertJsonStructure([
+            'message',
+            'data' => ['operation_id', 'status', 'payment_date'],
+        ])
         ->assertJsonPath('data.status', OperationStatus::DISBURSED->value)
         ->assertJsonPath('data.payment_date', '2026-05-02');
 
@@ -185,10 +217,20 @@ it('rejects invalid status transition and does not append history', function () 
     $user = User::factory()->create();
 
     $this->actingAs($user)
+        ->withSession(['_token' => 'test-csrf-token'])
         ->patchJson(route('operations.status.update', $operation), [
+            '_token' => 'test-csrf-token',
             'status' => OperationStatus::DRAFT->value,
         ])
-        ->assertStatus(422)
+        ->assertUnprocessable()
+        ->assertJsonStructure([
+            'message',
+            'errors' => [[
+                'code',
+                'message',
+                'context',
+            ]],
+        ])
         ->assertJsonPath('errors.0.code', 'OPERATION_STATUS_TRANSITION_INVALID');
 
     expect(OperationStatusHistory::query()->where('operation_id', $operation->id)->count())->toBe(0);
@@ -199,10 +241,20 @@ it('requires payment date when status changes to disbursed', function () {
     $user = User::factory()->create();
 
     $this->actingAs($user)
+        ->withSession(['_token' => 'test-csrf-token'])
         ->patchJson(route('operations.status.update', $operation), [
+            '_token' => 'test-csrf-token',
             'status' => OperationStatus::DISBURSED->value,
         ])
-        ->assertStatus(422)
+        ->assertUnprocessable()
+        ->assertJsonStructure([
+            'message',
+            'errors' => [[
+                'code',
+                'message',
+                'context',
+            ]],
+        ])
         ->assertJsonPath('errors.0.code', 'OPERATION_PAYMENT_DATE_REQUIRED');
 });
 
@@ -211,7 +263,9 @@ it('changes status through visual form flow and redirects to details page', func
     $user = User::factory()->create();
 
     $this->actingAs($user)
+        ->withSession(['_token' => 'test-csrf-token'])
         ->patch(route('operations.status.update', $operation), [
+            '_token' => 'test-csrf-token',
             'status' => OperationStatus::DISBURSED->value,
             'payment_date' => '2026-05-02',
             'notes' => 'Pagamento via tela',

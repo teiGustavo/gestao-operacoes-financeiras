@@ -11,6 +11,12 @@ uses(RefreshDatabase::class);
 it('shows welcome page with login link for guests', function () {
     $this->get('/')
         ->assertSuccessful()
+        ->assertViewIs('home')
+        ->assertViewHas('page', static function (array $page): bool {
+            return array_key_exists('title', $page)
+                && array_key_exists('welcome_heading', $page)
+                && array_key_exists('welcome_description', $page);
+        })
         ->assertSee('Bem-vindo(a) ao sistema')
         ->assertSee('Entrar')
         ->assertDontSee('Sair');
@@ -22,6 +28,8 @@ it('shows welcome page with logout action for authenticated users', function () 
     $this->actingAs($user)
         ->get('/')
         ->assertSuccessful()
+        ->assertViewIs('home')
+        ->assertViewHas('page')
         ->assertSee('Esteira')
         ->assertSee('Sair')
         ->assertDontSee('Entrar')
@@ -31,8 +39,20 @@ it('shows welcome page with logout action for authenticated users', function () 
 it('renders the login page for guests', function () {
     $this->get('/login')
         ->assertSuccessful()
+        ->assertViewIs('auth.login')
+        ->assertViewHas('page', static function (array $page): bool {
+            return array_key_exists('title', $page)
+                && array_key_exists('heading', $page)
+                && array_key_exists('subtitle', $page);
+        })
+        ->assertViewHas('demoCredentials', static function (array $demoCredentials): bool {
+            return array_key_exists('username', $demoCredentials)
+                && array_key_exists('email', $demoCredentials)
+                && array_key_exists('password', $demoCredentials)
+                && array_key_exists('shouldDisplay', $demoCredentials);
+        })
         ->assertSee('Entrar')
-        ->assertSee('Usuário administrador (desenvolvimento)')
+        ->assertSee('administrador (desenvolvimento)')
         ->assertSee('admin@finance.local')
         ->assertSee('admin123')
         ->assertSee('value="admin@finance.local"', false)
@@ -57,7 +77,8 @@ it('authenticates with username and redirects to intended url', function () {
 
     $this->get('/operations/1');
 
-    $this->post('/login', [
+    $this->withSession(['_token' => 'test-csrf-token'])->post('/login', [
+        '_token' => 'test-csrf-token',
         'login' => $user->username,
         'password' => 'secret123',
     ])->assertRedirect('/operations/1');
@@ -68,7 +89,8 @@ it('authenticates with username and redirects to intended url', function () {
 it('authenticates with seeded administrator credentials', function () {
     $this->seed(AdminUserSeeder::class);
 
-    $this->post('/login', [
+    $this->withSession(['_token' => 'test-csrf-token'])->post('/login', [
+        '_token' => 'test-csrf-token',
         'login' => 'admin@finance.local',
         'password' => 'admin123',
     ])->assertRedirect('/');
@@ -82,7 +104,8 @@ it('authenticates with email', function () {
         'password' => 'secret123',
     ]);
 
-    $this->post('/login', [
+    $this->withSession(['_token' => 'test-csrf-token'])->post('/login', [
+        '_token' => 'test-csrf-token',
         'login' => $user->email,
         'password' => 'secret123',
     ])->assertRedirect('/');
@@ -96,10 +119,13 @@ it('does not authenticate with invalid credentials', function () {
         'password' => 'secret123',
     ]);
 
-    $this->from('/login')->post('/login', [
-        'login' => 'joao@example.com',
-        'password' => 'senha-incorreta',
-    ])->assertRedirect('/login')
+    $this->from('/login')
+        ->withSession(['_token' => 'test-csrf-token'])
+        ->post('/login', [
+            '_token' => 'test-csrf-token',
+            'login' => 'joao@example.com',
+            'password' => 'senha-incorreta',
+        ])->assertRedirect('/login')
         ->assertSessionHasErrors([
             'login' => 'Credenciais invalidas. Verifique login e senha.',
         ]);
@@ -110,7 +136,8 @@ it('does not authenticate with invalid credentials', function () {
 it('redirects guests when trying to access protected system routes', function () {
     $this->get('/operations/999')->assertRedirect('/login');
 
-    $this->patch('/operations/999/status', [
+    $this->withSession(['_token' => 'test-csrf-token'])->patch('/operations/999/status', [
+        '_token' => 'test-csrf-token',
         'status' => 'approved',
     ])->assertRedirect('/login');
 });
@@ -127,7 +154,10 @@ it('logs out authenticated users', function () {
     $user = User::factory()->create();
 
     $this->actingAs($user)
-        ->post('/logout')
+        ->withSession(['_token' => 'test-csrf-token'])
+        ->post('/logout', [
+            '_token' => 'test-csrf-token',
+        ])
         ->assertRedirect('/login');
 
     $this->assertGuest();
@@ -137,7 +167,10 @@ it('shows a success message after logout', function () {
     $user = User::factory()->create();
 
     $this->actingAs($user)
+        ->withSession(['_token' => 'test-csrf-token'])
         ->followingRedirects()
-        ->post('/logout')
+        ->post('/logout', [
+            '_token' => 'test-csrf-token',
+        ])
         ->assertSee('Sessao encerrada com sucesso.');
 });

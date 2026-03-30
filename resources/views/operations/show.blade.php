@@ -1,21 +1,6 @@
-@php
-    use App\Domain\Operation\OperationStatus;
-    use App\Domain\Operation\ProductType;
-    use Illuminate\Support\Carbon;
-
-    $statusOptions = OperationStatus::cases();
-    $statusLabels = collect($statusOptions)
-        ->mapWithKeys(fn ($status) => [$status->value => $status->label()])
-        ->toArray();
-    $getStatusLabel = fn ($statusValue) => $statusLabels[$statusValue] ?? $statusValue;
-
-    $formatDateToBrazilian = fn ($date) => Carbon::make($date)?->format('d/m/Y') ?? '-';
-    $formatToBRLCurrency = fn ($value) => 'R$ ' . number_format((float) $value, 2, ',', '.');
-@endphp
-
 @extends('layouts.public')
 
-@section('page_title', 'Detalhe da Operação')
+@section('page_title', $page['title'])
 
 @section('content')
     <main class="mx-auto w-full max-w-5xl px-6 py-10">
@@ -60,7 +45,7 @@
                         </div>
                         <div>
                             <dt class="font-bold text-slate-700">Valor da operação</dt>
-                            <dd>{{ $formatToBRLCurrency($operation['requested_value']) }}</dd>
+                            <dd>{{ $operation['requested_value_display'] }}</dd>
                         </div>
                         <div>
                             <dt class="font-bold text-slate-700">Status atual</dt>
@@ -68,7 +53,7 @@
                         </div>
                         <div>
                             <dt class="font-bold text-slate-700">Produto</dt>
-                            <dd>{{ ProductType::from($operation['product_type'])->label() }}</dd>
+                            <dd>{{ $operation['product_label'] }}</dd>
                         </div>
                         <div>
                             <dt class="font-bold text-slate-700">Conveniada</dt>
@@ -84,7 +69,7 @@
                         method="POST"
                         action="{{ route('operations.status.update', ['operation' => $operation['id']]) }}"
                         class="space-y-3"
-                        x-data="{ selectedStatus: '{{ old('status', $operation['status']['value']) }}' }"
+                        x-data="{ selectedStatus: '{{ $selectedStatus }}' }"
                     >
                         @csrf
                         @method('PATCH')
@@ -98,35 +83,20 @@
                                     class="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
                                     x-model="selectedStatus">
                                 @foreach ($statusOptions as $statusOption)
-                                    @php
-                                        $isSelectable = $statusSelectability[$statusOption->value] ?? false;
-                                        $isCurrentStatus = $operation['status']['value'] === $statusOption->value;
-                                    @endphp
-
                                     <option
-                                        value="{{ $statusOption->value }}"
-                                        @selected(old('status', $operation['status']['value']) === $statusOption->value)
-                                        @disabled(! $isSelectable)
-                                        @if (! $isSelectable && isset($statusBlockedReasons[$statusOption->value])) title="{{ $statusBlockedReasons[$statusOption->value] }}" @endif
+                                        value="{{ $statusOption['value'] }}"
+                                        @selected($statusOption['is_selected'])
+                                        @disabled(! $statusOption['is_selectable'])
+                                        @if (! $statusOption['is_selectable'] && filled($statusOption['blocked_reason'])) title="{{ $statusOption['blocked_reason'] }}" @endif
                                     >
-                                        {{ $statusOption->label() }}{{ $isCurrentStatus ? ' (atual)' : '' }}
+                                        {{ $statusOption['label'] }}{{ $statusOption['is_current'] ? ' (atual)' : '' }}
                                     </option>
                                 @endforeach
                             </select>
                             <p class="mt-1 text-xs text-slate-500">Status indisponiveis ficam bloqueados para
                                 selecao.</p>
 
-                            @php
-                                $blockedStatuses = collect($statusOptions)
-                                    ->filter(fn ($statusOption) => ! ($statusSelectability[$statusOption->value] ?? false))
-                                    ->map(fn ($statusOption) => [
-                                        'label' => $statusOption->label(),
-                                        'reason' => $statusBlockedReasons[$statusOption->value] ?? 'Sem permissao para transicao.',
-                                    ])
-                                    ->values();
-                            @endphp
-
-                            @if ($blockedStatuses->isNotEmpty())
+                            @if (! empty($blockedStatuses))
                                 <ul class="mt-2 list-disc pl-4 text-xs text-slate-500">
                                     @foreach ($blockedStatuses as $blockedStatus)
                                         <li><span
@@ -189,19 +159,14 @@
                             </thead>
                             <tbody class="divide-y divide-slate-100">
                                 @foreach ($operation['installments'] as $installment)
-                                    @php
-                                        $isOverdueInstallment = ! $installment['paid']
-                                            && Carbon::make($installment['due_date'])?->isPast();
-                                    @endphp
-
-                                    <tr @class(['bg-red-50' => $isOverdueInstallment])>
+                                    <tr @class([$installment['row_class'] => filled($installment['row_class'])])>
                                         <td class="px-3 py-2">{{ $installment['installment_number'] }}</td>
-                                        <td class="px-3 py-2">{{ $formatDateToBrazilian($installment['due_date']) }}</td>
-                                        <td class="px-3 py-2">{{ $formatToBRLCurrency($installment['value']) }}</td>
-                                        <td class="px-3 py-2 {{ $isOverdueInstallment ? 'font-semibold text-red-700' : '' }}">
-                                            {{ $installment['paid'] ? 'Pago' : ($isOverdueInstallment ? 'Vencida' : 'Em aberto') }}
+                                        <td class="px-3 py-2">{{ $installment['due_date_display'] }}</td>
+                                        <td class="px-3 py-2">{{ $installment['value_display'] }}</td>
+                                        <td class="px-3 py-2 {{ $installment['status_class'] }}">
+                                            {{ $installment['status_label'] }}
                                         </td>
-                                        <td class="px-3 py-2">{{ $formatDateToBrazilian($installment['paid_at']) }}</td>
+                                        <td class="px-3 py-2">{{ $installment['paid_at_display'] }}</td>
                                         <td class="px-3 py-2">{{ $installment['paid_by_user']['name'] ?? '-' }}</td>
                                     </tr>
                                 @endforeach
@@ -231,9 +196,9 @@
                             <tbody class="divide-y divide-slate-100">
                             @foreach ($operation['history'] as $historyItem)
                                 <tr>
-                                    <td class="px-3 py-2">{{ $formatDateToBrazilian($historyItem['changed_at']) }}</td>
-                                    <td class="px-3 py-2">{{ $getStatusLabel($historyItem['previous_status']) ?? '-' }}</td>
-                                    <td class="px-3 py-2">{{ $getStatusLabel($historyItem['new_status']) }}</td>
+                                    <td class="px-3 py-2">{{ $historyItem['changed_at_display'] }}</td>
+                                    <td class="px-3 py-2">{{ $historyItem['previous_status_label'] }}</td>
+                                    <td class="px-3 py-2">{{ $historyItem['new_status_label'] }}</td>
                                     <td class="px-3 py-2">{{ $historyItem['changed_by_user']['name'] ?? '-' }}</td>
                                     <td class="px-3 py-2">{{ $historyItem['notes'] ?? '-' }}</td>
                                 </tr>

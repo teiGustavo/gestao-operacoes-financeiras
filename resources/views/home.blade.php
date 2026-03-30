@@ -1,13 +1,13 @@
 @extends('layouts.public')
 
-@section('page_title', config('app.name', 'Gestao de Operacoes Financeiras'))
+@section('page_title', $page['title'])
 
 @section('content')
     <main class="mx-auto flex min-h-screen w-full max-w-2xl items-center px-6 py-10">
         <section class="w-full rounded-xl border border-slate-200 bg-white p-8 shadow-sm">
-            <h1 class="text-3xl font-semibold">Bem-vindo(a) ao sistema</h1>
+            <h1 class="text-3xl font-semibold">{{ $page['welcome_heading'] }}</h1>
             <p class="mt-3 text-sm text-slate-600">
-                Gerencie operacoes financeiras com autenticação e rastreabilidade de status.
+                {{ $page['welcome_description'] }}
             </p>
 
             <div class="mt-6 flex flex-wrap gap-3">

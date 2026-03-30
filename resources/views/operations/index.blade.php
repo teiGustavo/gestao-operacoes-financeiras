@@ -122,7 +122,7 @@
                                     </td>
                                     <td class="px-3 py-2">{{ $operation['client_name'] }}</td>
                                     <td class="px-3 py-2">{{ $operation['cpf'] }}</td>
-                                    <td class="px-3 py-2">{{ number_format((float) $operation['operation_value'], 2, ',', '.') }}</td>
+                                    <td class="px-3 py-2">{{ $operation['operation_value_display'] }}</td>
                                     <td class="px-3 py-2">{{ $operation['status']['label'] }}</td>
                                     <td class="px-3 py-2">{{ $operation['product']['label'] }}</td>
                                     <td class="px-3 py-2">{{ $operation['agreement']['name'] }}</td>
@@ -146,20 +146,14 @@
                                             <input type="hidden" name="redirect_to" value="{{ request()->fullUrl() }}">
 
                                             <select name="status" class="w-full rounded-md border border-slate-300 px-2 py-1 text-xs" x-model="selectedStatus">
-                                                @foreach ($statusOptions as $statusValue => $statusLabel)
-                                                    @php
-                                                        $isSelectable = $statusSelectabilityByCurrentStatus[$operation['status']['value']][$statusValue] ?? false;
-                                                        $isCurrentStatus = $operation['status']['value'] === $statusValue;
-                                                        $blockedReason = $statusBlockedReasonsByCurrentStatus[$operation['status']['value']][$statusValue] ?? 'Sem permissao para transicao.';
-                                                    @endphp
-
+                                                @foreach ($operation['quick_status_options'] as $statusOption)
                                                     <option
-                                                        value="{{ $statusValue }}"
-                                                        @selected($isCurrentStatus)
-                                                        @disabled(! $isSelectable)
-                                                        @if (! $isSelectable) title="{{ $blockedReason }}" @endif
+                                                        value="{{ $statusOption['value'] }}"
+                                                        @selected($statusOption['is_current'])
+                                                        @disabled(! $statusOption['is_selectable'])
+                                                        @if (! $statusOption['is_selectable']) title="{{ $statusOption['blocked_reason'] }}" @endif
                                                     >
-                                                        {{ $statusLabel }}{{ $isCurrentStatus ? ' (atual)' : '' }}
+                                                        {{ $statusOption['label'] }}{{ $statusOption['is_current'] ? ' (atual)' : '' }}
                                                     </option>
                                                 @endforeach
                                             </select>

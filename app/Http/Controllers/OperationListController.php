@@ -8,6 +8,7 @@ use App\Http\Requests\ListOperationsRequest;
 use App\Http\Resources\Operation\OperationListResource;
 use App\Http\ViewModels\Operation\OperationListViewModel;
 use App\Infrastructure\Queries\Operation\OperationListQuery;
+use App\Infrastructure\Queries\Operation\OperationReportRunLatestQuery;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\JsonResponse;
 
@@ -15,6 +16,7 @@ class OperationListController extends Controller
 {
     public function __construct(
         private readonly OperationListQuery $operationListQuery,
+        private readonly OperationReportRunLatestQuery $operationReportRunLatestQuery,
         private readonly OperationListViewModel $operationListViewModel,
     ) {}
 
@@ -24,9 +26,14 @@ class OperationListController extends Controller
         $result = $this->operationListQuery->list($validatedFilters);
 
         if (! $request->expectsJson()) {
+            $reportRuns = $this->operationReportRunLatestQuery->latestForUser(
+                userId: (int) $request->user()->id,
+            );
+
             return view('operations.index', $this->operationListViewModel->toArray(
-                operations: $result,
-                filters: $validatedFilters,
+                $result,
+                $validatedFilters,
+                $reportRuns,
             ));
         }
 

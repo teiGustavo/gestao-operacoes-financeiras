@@ -11,12 +11,21 @@
                     <p class="mt-1 text-sm text-slate-600">Filtre e acompanhe as operacoes cadastradas.</p>
                 </div>
 
-                <a
-                    href="{{ route('operations.index') }}"
-                    class="inline-flex items-center rounded-md border border-slate-300 px-3 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-100"
-                >
-                    Limpar filtros
-                </a>
+                <div class="flex items-center gap-2">
+                    <a
+                        href="{{ route('operations.report.csv', request()->only(['status', 'operation', 'product', 'agreement'])) }}"
+                        class="inline-flex items-center rounded-md border border-emerald-300 px-3 py-2 text-sm font-medium text-emerald-700 transition hover:bg-emerald-50"
+                    >
+                        Exportar CSV
+                    </a>
+
+                    <a
+                        href="{{ route('operations.index') }}"
+                        class="inline-flex items-center rounded-md border border-slate-300 px-3 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-100"
+                    >
+                        Limpar filtros
+                    </a>
+                </div>
             </div>
 
             @if (session('status'))
@@ -91,6 +100,59 @@
                     </button>
                 </div>
             </form>
+
+            <section class="mt-6 rounded-lg border border-slate-200 p-4">
+                <h2 class="text-sm font-semibold text-slate-800">Ultimos relatorios</h2>
+                <p class="mt-1 text-xs text-slate-500">Acompanhe o status e baixe os CSVs finalizados.</p>
+
+                @if ($recentReportRuns === [])
+                    <p class="mt-3 text-sm text-slate-600">Nenhum relatorio solicitado ainda.</p>
+                @else
+                    <div class="mt-3 overflow-x-auto">
+                        <table class="min-w-full divide-y divide-slate-200 text-xs">
+                            <thead class="bg-slate-50">
+                                <tr>
+                                    <th class="px-3 py-2 text-left font-medium text-slate-700">Run</th>
+                                    <th class="px-3 py-2 text-left font-medium text-slate-700">Status</th>
+                                    <th class="px-3 py-2 text-left font-medium text-slate-700">Linhas</th>
+                                    <th class="px-3 py-2 text-left font-medium text-slate-700">Finalizado em</th>
+                                    <th class="px-3 py-2 text-left font-medium text-slate-700">Motivo da falha</th>
+                                    <th class="px-3 py-2 text-left font-medium text-slate-700">Acao</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-slate-100">
+                                @foreach ($recentReportRuns as $reportRun)
+                                    <tr>
+                                        <td class="px-3 py-2">#{{ $reportRun['id'] }}</td>
+                                        <td class="px-3 py-2">{{ $reportRun['status_label'] }}</td>
+                                        <td class="px-3 py-2">{{ $reportRun['total_rows'] }}</td>
+                                        <td class="px-3 py-2">{{ $reportRun['finished_at'] ?? '-' }}</td>
+                                        <td class="px-3 py-2">
+                                            @if ($reportRun['status'] === 'failed')
+                                                {{ $reportRun['failure_message'] ?? 'Falha sem detalhe' }}
+                                            @else
+                                                -
+                                            @endif
+                                        </td>
+                                        <td class="px-3 py-2">
+                                            @if ($reportRun['download_url'])
+                                                <a
+                                                    href="{{ $reportRun['download_url'] }}"
+                                                    class="inline-flex items-center rounded-md border border-emerald-300 px-2 py-1 font-medium text-emerald-700 hover:bg-emerald-50"
+                                                >
+                                                    Baixar CSV
+                                                </a>
+                                            @else
+                                                <span class="text-slate-500">Aguardando</span>
+                                            @endif
+                                        </td>
+                                    </tr>
+                                @endforeach
+                            </tbody>
+                        </table>
+                    </div>
+                @endif
+            </section>
 
             @if ($operations->isEmpty())
                 <div class="mt-6 rounded-md bg-slate-50 px-4 py-3 text-sm text-slate-600">

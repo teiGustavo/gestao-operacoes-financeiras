@@ -8,7 +8,7 @@ RUN_ID ?=
 REQUESTED_BY_USER_ID ?=
 REQUESTED_BY_USER_ID_OPTION := $(if $(REQUESTED_BY_USER_ID),--requested-by-user-id=$(REQUESTED_BY_USER_ID),)
 
-.PHONY: help up down restart build ps logs shell artisan migrate test pint composer npm import import-run import-status import-status-latest queue-work-imports queue-worker-start queue-worker-stop queue-worker-status queue-monitor
+.PHONY: help up down restart build ps logs shell artisan migrate test pint composer npm import import-run import-status import-status-latest report-status report-status-latest queue-work-imports queue-worker-start queue-worker-stop queue-worker-status queue-monitor
 
 help: ## Lista os comandos disponíveis
 	@awk 'BEGIN {FS = ":.*##"; printf "Comandos:\n"} /^[a-zA-Z_-]+:.*##/ {printf "  %-12s %s\n", $$1, $$2}' $(MAKEFILE_LIST)
@@ -65,6 +65,12 @@ import-status: ## Exibe status da importacao (use RUN_ID='1')
 
 import-status-latest: ## Exibe status da importacao mais recente
 	$(COMPOSE_CMD) exec $(APP_SERVICE) php artisan operations:import:status-latest
+
+report-status: ## Exibe status do relatorio (use RUN_ID='1')
+	$(COMPOSE_CMD) exec $(APP_SERVICE) php artisan operations:report:status $(RUN_ID)
+
+report-status-latest: ## Exibe status do relatorio mais recente
+	$(COMPOSE_CMD) exec $(APP_SERVICE) php artisan operations:report:status-latest
 
 queue-work-imports: ## Processa fila imports no container app (manual/bloqueante)
 	$(COMPOSE_CMD) exec $(APP_SERVICE) php artisan queue:work --queue=imports,default --tries=3 --timeout=120

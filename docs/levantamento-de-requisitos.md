@@ -114,7 +114,7 @@ Para visualizar os dados iniciais, consulte a
 - Separar transformação de dados da camada de view usando Presenter/ViewModel da listagem
 
 #### RF04 - Geração de Relatórios
-**Descrição:** O sistema deve gerar relatórios em formato CSV ou Excel respeitando os filtros aplicados.
+**Descrição:** O sistema deve gerar relatórios respeitando os filtros aplicados (escopo atual: CSV).
 
 **Campos do Relatório:**
 - Código da operação
@@ -155,10 +155,12 @@ $$
 
 **Regras do Relatório:**
 - Deve respeitar os filtros aplicados na tela
-- Formato: CSV ou Excel
+- Formato implementado: CSV
 - Deve suportar grande volume de dados
 - Não deve comprometer a performance da aplicação
-- Geração assíncrona recomendada para grandes volumes
+- Geração assíncrona para evitar bloqueio da interface
+- Deve registrar execução de exportação (status, datas e quantidade de linhas)
+- Deve permitir download autenticado do arquivo ao finalizar com sucesso
 
 #### RF05 - Análise de Operação (Detalhes e Alteração de Status)
 **Descrição:** O sistema deve permitir visualizar detalhes de uma operação e atualizar seu status conforme regras de negócio.

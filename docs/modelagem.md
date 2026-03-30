@@ -375,6 +375,29 @@ difícil de implementar).
 **Foreign Keys:**
 - `CONSTRAINT fk_operation_import_staging_rows_run_id FOREIGN KEY (operation_import_run_id) REFERENCES operation_import_runs(id) ON DELETE CASCADE`
 
+### 11. OperationReportRuns (Execuções de Exportação de Relatórios)
+
+**Colunas:**
+- `id`: PK, BigInt, Auto Increment
+- `status`: Varchar(255), NOT NULL
+- `requested_by_user_id`: FK, BigInt, Nullable
+- `filters`: JSON, Nullable
+- `reference_date`: Date, NOT NULL
+- `output_file_path`: Varchar(255), Nullable
+- `queued_at`: Timestamp, Nullable
+- `started_at`: Timestamp, Nullable
+- `finished_at`: Timestamp, Nullable
+- `total_rows`: Unsigned Int, Default=0, NOT NULL
+- `failure_message`: Text, Nullable
+- `created_at`: Timestamp, Default=CURRENT_TIMESTAMP
+- `updated_at`: Timestamp, Default=CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+
+**Índices:**
+- `KEY idx_operation_report_runs_status (status)`
+
+**Foreign Keys:**
+- `CONSTRAINT fk_operation_report_runs_requested_by_user_id FOREIGN KEY (requested_by_user_id) REFERENCES users(id) ON DELETE SET NULL`
+
 ---
 
 ## Notas Importantes
@@ -397,6 +420,7 @@ Os índices compostos foram estrategicamente projetados para:
 - **`status_histories` → `users`**: `ON DELETE RESTRICT` → Impede exclusão de usuários com histórico de alterações (auditoria)
 - **`operation_import_run_errors` → `operation_import_runs`**: `ON DELETE CASCADE` → Erros detalhados são removidos junto com a execução de importação
 - **`operation_import_staging_rows` → `operation_import_runs`**: `ON DELETE CASCADE` → Linhas auxiliares de staging são removidas junto com a execução
+- **`operation_report_runs` → `users`**: `ON DELETE SET NULL` → Mantém histórico de exportações mesmo se o usuário for removido
 
 > Casos como a deleção de um cliente ou conveniada com operações ativas, 
   ou a deleção de um usuário com histórico de alterações,
@@ -478,3 +502,5 @@ Para consultar a definição de cada `product_type`: [RF05: Análise de Operaç�
 - Um `erro por linha` pertence a uma `execução de importação` → `(N:1)`
 - Uma `execução de importação` pode ter várias `linhas de staging` → `(1:N)`
 - Uma `linha de staging` pertence a uma `execução de importação` → `(N:1)`
+- Um `usuário` pode solicitar várias `execuções de relatório` → `(1:N)`
+- Uma `execução de relatório` pode pertencer a um `usuário` solicitante → `(N:1)`

@@ -8,8 +8,10 @@ use App\Domain\Operation\OperationStatus;
 use App\Domain\Operation\OperationStatusTransitions;
 use App\Domain\Operation\ProductType;
 use App\Models\Agreement;
+use App\Models\OperationReportRun;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Pagination\LengthAwarePaginator as Paginator;
+use Illuminate\Support\Collection;
 
 final class OperationListViewModel
 {
@@ -22,10 +24,11 @@ final class OperationListViewModel
      *     statusSelectabilityByCurrentStatus: array<string, array<string, bool>>,
      *     statusBlockedReasonsByCurrentStatus: array<string, array<string, string>>,
      *     productOptions: array<string, string>,
-     *     agreementOptions: array<int, string>
+     *     agreementOptions: array<int, string>,
+     *     recentReportRuns: list<array{id:int,status:string,status_label:string,total_rows:int,finished_at:string|null,download_url:string|null,failure_message:string|null}>
      * }
      */
-    public function toArray(LengthAwarePaginator $operations, array $filters): array
+    public function toArray(LengthAwarePaginator $operations, array $filters, ?Collection $reportRuns = null): array
     {
         $statusOptions = collect(OperationStatus::cases())
             ->mapWithKeys(static fn (OperationStatus $status): array => [$status->value => $status->label()])
@@ -89,6 +92,30 @@ final class OperationListViewModel
                 ->orderBy('name')
                 ->pluck('name', 'id')
                 ->all(),
+            'recentReportRuns' => $reportRuns?->map(function (OperationReportRun $operationReportRun): array {
+                return [
+                    'id' => $operationReportRun->id,
+                    'status' => $operationReportRun->status,
+                    'status_label' => $this->statusLabel((string) $operationReportRun->status),
+                    'total_rows' => (int) $operationReportRun->total_rows,
+                    'finished_at' => $operationReportRun->finished_at?->format('d/m/Y H:i:s'),
+                    'download_url' => $operationReportRun->status === OperationReportRun::STATUS_COMPLETED
+                        ? route('operations.report.csv.download', ['operationReportRun' => $operationReportRun->id])
+                        : null,
+                    'failure_message' => $operationReportRun->failure_message,
+                ];
+            })->values()->all() ?? [],
         ];
+    }
+
+    private function statusLabel(string $status): string
+    {
+        return match ($status) {
+            OperationReportRun::STATUS_PENDING => 'Pendente',
+            OperationReportRun::STATUS_PROCESSING => 'Processando',
+            OperationReportRun::STATUS_COMPLETED => 'Concluido',
+            OperationReportRun::STATUS_FAILED => 'Falhou',
+            default => 'Desconhecido',
+        };
     }
 }

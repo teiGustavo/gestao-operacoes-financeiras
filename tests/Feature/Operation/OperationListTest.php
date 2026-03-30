@@ -8,6 +8,7 @@ use App\Domain\Operation\ProductType;
 use App\Models\Agreement;
 use App\Models\Client;
 use App\Models\Operation;
+use App\Models\OperationReportRun;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 
@@ -203,6 +204,70 @@ it('supports pagination with per_page filter', function () {
         ->assertJsonPath('meta.per_page', 1)
         ->assertJsonPath('meta.total', 2)
         ->assertJsonCount(1, 'data');
+});
+
+it('shows recent report runs with download link when completed', function () {
+    $user = User::factory()->create();
+    $agreement = Agreement::query()->create(['name' => 'Convenio Relatorio']);
+
+    createOperation(
+        clientName: 'Cliente Relatorio',
+        clientCpf: '12121212121',
+        agreementId: $agreement->id,
+        status: OperationStatus::APPROVED,
+        productType: ProductType::PAYROLL_LOAN,
+        requestedValue: 1000,
+    );
+
+    $completedRun = OperationReportRun::query()->create([
+        'status' => OperationReportRun::STATUS_COMPLETED,
+        'requested_by_user_id' => $user->id,
+        'filters' => ['status' => OperationStatus::APPROVED->value],
+        'reference_date' => '2026-06-30',
+        'queued_at' => now()->subMinute(),
+        'started_at' => now()->subSeconds(50),
+        'finished_at' => now(),
+        'total_rows' => 1,
+        'output_file_path' => 'reports/operations-report-run-1.csv',
+    ]);
+
+    OperationReportRun::query()->create([
+        'status' => OperationReportRun::STATUS_PROCESSING,
+        'requested_by_user_id' => $user->id,
+        'filters' => ['status' => OperationStatus::APPROVED->value],
+        'reference_date' => '2026-06-30',
+        'queued_at' => now()->subSeconds(40),
+        'started_at' => now()->subSeconds(30),
+        'finished_at' => null,
+        'total_rows' => 0,
+        'output_file_path' => null,
+    ]);
+
+    OperationReportRun::query()->create([
+        'status' => OperationReportRun::STATUS_FAILED,
+        'requested_by_user_id' => $user->id,
+        'filters' => ['status' => OperationStatus::APPROVED->value],
+        'reference_date' => '2026-06-30',
+        'queued_at' => now()->subSeconds(20),
+        'started_at' => now()->subSeconds(15),
+        'finished_at' => now()->subSeconds(10),
+        'total_rows' => 0,
+        'output_file_path' => null,
+        'failure_message' => 'arquivo temporario nao encontrado',
+    ]);
+
+    $this->actingAs($user)
+        ->get(route('operations.index'))
+        ->assertSuccessful()
+        ->assertSee('Ultimos relatorios')
+        ->assertSee('Concluido')
+        ->assertSee('Processando')
+        ->assertSee('Falhou')
+        ->assertSee('Motivo da falha')
+        ->assertSee('arquivo temporario nao encontrado')
+        ->assertSee('Baixar CSV')
+        ->assertSee(route('operations.report.csv.download', ['operationReportRun' => $completedRun->id]), false)
+        ->assertSee('Aguardando');
 });
 
 function createOperation(

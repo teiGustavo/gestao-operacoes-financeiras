@@ -106,6 +106,8 @@ Um arquivo `Makefile` foi criado para facilitar a configuração do ambiente.
 - `make import-run FILE='/caminho/arquivo.csv' REQUESTED_BY_USER_ID='1'`: Fluxo one-shot (enfileira, processa fila no `app` até esvaziar e exibe o último status)
 - `make import-status RUN_ID='1'`: Exibe status de uma execução de importação
 - `make import-status-latest`: Exibe status da execução de importação mais recente
+- `make report-status RUN_ID='1'`: Exibe status de uma execução de relatório
+- `make report-status-latest`: Exibe status da execução de relatório mais recente
 - `make queue-work-imports`: Processa a fila `imports` no container `app` (manual/bloqueante)
 - `make queue-worker-start`: Sobe `mysql` e o serviço dedicado `imports-worker`
 - `make queue-worker-stop`: Para o serviço `imports-worker`
@@ -139,6 +141,22 @@ make import-run FILE='/caminho/arquivo.csv' REQUESTED_BY_USER_ID='1'
 ```
 
 > Se `requested-by-user-id` for informado, o usuário solicitante recebe notificação no canal `database` ao término da importação.
+
+### Exportação CSV assíncrona (fila)
+
+Fluxo recomendado (worker dedicado):
+
+```bash
+make queue-worker-start
+# acione "Exportar CSV" na esteira (/operations)
+make report-status-latest
+```
+
+Para consultar uma execução específica:
+
+```bash
+make report-status RUN_ID='12'
+```
 
 ---
 

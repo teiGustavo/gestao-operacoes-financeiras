@@ -399,3 +399,50 @@ não requerer dependências adicionais e ser persistente por natureza.
   para Redis com (RDB + AOF, por exemplo), 
   garantindo latência sub-milissegundo sem sacrificar a durabilidade dos jobs 
   (e sem ter problemas de gargalho no banco em um cenário de concorrência massiva).
+
+---
+
+### Problema 04 - Exportação de Relatórios (RF04)
+
+#### Escopo implementado
+
+Nesta etapa, a exportação foi implementada apenas em **CSV**.
+O formato Excel foi mantido como backlog para uma próxima iteração.
+
+#### Abordagem assíncrona adotada
+
+A geração de relatório foi implementada de forma assíncrona com o mesmo padrão operacional da importação:
+
+- criação de uma execução em `operation_report_runs` com status `pending`;
+- processamento via job dedicado (`ProcessOperationCsvExportJob`) na fila;
+- escrita do arquivo em `storage/app/reports/*`;
+- atualização de status (`processing`, `completed`, `failed`) com timestamps;
+- notificação em `database` para o usuário solicitante ao concluir/falhar.
+
+Essa abordagem evita bloquear a requisição HTTP de listagem/esteira,
+mantém rastreabilidade operacional e prepara o sistema para volumes maiores.
+
+#### Cálculo de valor presente e taxa da operação
+
+O cálculo do valor presente foi centralizado em `PresentValueCalculator`.
+Para reduzir acoplamento e deixar a regra explícita, a resolução da taxa da operação
+foi extraída para `OperationRateResolver`.
+
+No estado atual dos dados (sem coluna específica de `taxa_juros` persistida na tabela de operações),
+a taxa efetiva usada no relatório é derivada de:
+
+- `operation_rate = total_interest / requested_value` (com proteção para divisão por zero e mínimo 0).
+
+Com isso, o cálculo fica estável e testável agora, sem bloquear evolução futura
+para uma taxa explícita persistida no banco.
+
+#### Operação no frontend
+
+Na esteira de operações, foi adicionado um painel de "últimos relatórios" do usuário autenticado,
+exibindo status e ação de download quando a execução estiver concluída.
+
+Também foi adicionado comando de apoio operacional:
+
+- `operations:report:status-latest`.
+- `operations:report:status {run_id}`.
+

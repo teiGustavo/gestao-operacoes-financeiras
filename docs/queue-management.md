@@ -1,9 +1,12 @@
-# Gerenciamento de Fila de Imports
+# Gerenciamento de Fila (Imports e Relatórios)
 
-Este documento cobre apenas operação da fila (worker, monitoramento e troubleshooting).
+Este documento cobre operação da fila (worker, monitoramento e troubleshooting).
 Bootstrap geral e uso do projeto ficam no `README.md`.
 
-O projeto usa fila em banco (`QUEUE_CONNECTION=database`) e o serviço `imports-worker` no `docker-compose` para processar imports continuamente.
+O projeto usa fila em banco (`QUEUE_CONNECTION=database`) e o serviço `imports-worker` no `docker-compose` para processar jobs assíncronos de:
+
+- importação CSV de operações;
+- exportação CSV de relatórios.
 
 ## Por que usar um serviço separado no docker-compose?
 
@@ -23,6 +26,8 @@ Sim, é necessário para o fluxo assíncrono ficar estável no ambiente local:
 | `make queue-monitor`              | Mostra logs em tempo real do `imports-worker`     |
 | `make queue-work-imports`         | Processa a fila no `app` (modo manual/bloqueante) |
 | `make artisan CMD='queue:failed'` | Lista jobs falhados                               |
+| `make report-status-latest`       | Exibe status da exportação de relatório mais recente |
+| `make report-status RUN_ID='12'`  | Exibe status de uma execução específica de relatório |
 
 ```bash
 make queue-worker-start
@@ -33,10 +38,31 @@ make queue-worker-stop
 
 ## Fluxo recomendado (contínuo)
 
+### Importação CSV
+
 ```bash
 make queue-worker-start
 make import FILE='/caminho/arquivo.csv' REQUESTED_BY_USER_ID='1'
 make import-status-latest
+```
+
+### Exportação CSV de relatório
+
+1. Acione "Exportar CSV" na tela da esteira (`/operations`) com ou sem filtros.
+2. O sistema enfileira a exportação e cria uma execução em `operation_report_runs`.
+3. Após concluir, o usuário recebe notificação em `database`.
+4. O download fica disponível na própria esteira (painel de "Últimos relatórios").
+
+Para consultar o último status via CLI:
+
+```bash
+make report-status-latest
+```
+
+Para consultar uma execução específica:
+
+```bash
+make report-status RUN_ID='12'
 ```
 
 Para execução única (sem manter worker dedicado):
@@ -78,4 +104,5 @@ make artisan CMD='queue:flush'
 - `docker-compose.yml`
 - `Makefile`
 - `app/Infrastructure/Import/Jobs/ProcessOperationCsvImportJob.php`
+- `app/Infrastructure/Report/Jobs/ProcessOperationCsvExportJob.php`
 

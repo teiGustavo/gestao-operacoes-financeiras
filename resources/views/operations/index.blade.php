@@ -12,6 +12,23 @@
                 </div>
 
                 <div class="flex items-center gap-2">
+                    <form action="{{ route('operations.import.csv') }}" method="POST" enctype="multipart/form-data" class="flex items-center gap-2">
+                        @csrf
+                        <input
+                            type="file"
+                            name="csv_file"
+                            accept=".csv,text/csv"
+                            class="block w-full max-w-56 rounded-md border border-slate-300 px-2 py-1 text-xs text-slate-700"
+                            required
+                        >
+                        <button
+                            type="submit"
+                            class="inline-flex items-center rounded-md border border-indigo-300 px-3 py-2 text-sm font-medium text-indigo-700 transition hover:bg-indigo-50"
+                        >
+                            Importar CSV
+                        </button>
+                    </form>
+
                     <a
                         href="{{ route('operations.report.csv', request()->only(['status', 'operation', 'product', 'agreement'])) }}"
                         class="inline-flex items-center rounded-md border border-emerald-300 px-3 py-2 text-sm font-medium text-emerald-700 transition hover:bg-emerald-50"
@@ -100,6 +117,44 @@
                     </button>
                 </div>
             </form>
+
+            <section class="mt-6 rounded-lg border border-slate-200 p-4">
+                <h2 class="text-sm font-semibold text-slate-800">Ultimas importacoes</h2>
+                <p class="mt-1 text-xs text-slate-500">Acompanhe o status das importacoes CSV solicitadas por voce.</p>
+
+                @if ($recentImportRuns === [])
+                    <p class="mt-3 text-sm text-slate-600">Nenhuma importacao solicitada ainda.</p>
+                @else
+                    <div class="mt-3 overflow-x-auto">
+                        <table class="min-w-full divide-y divide-slate-200 text-xs">
+                            <thead class="bg-slate-50">
+                                <tr>
+                                    <th class="px-3 py-2 text-left font-medium text-slate-700">Run</th>
+                                    <th class="px-3 py-2 text-left font-medium text-slate-700">Status</th>
+                                    <th class="px-3 py-2 text-left font-medium text-slate-700">Total</th>
+                                    <th class="px-3 py-2 text-left font-medium text-slate-700">Importadas</th>
+                                    <th class="px-3 py-2 text-left font-medium text-slate-700">Rejeitadas</th>
+                                    <th class="px-3 py-2 text-left font-medium text-slate-700">Finalizado em</th>
+                                    <th class="px-3 py-2 text-left font-medium text-slate-700">Motivo da falha</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-slate-100">
+                                @foreach ($recentImportRuns as $importRun)
+                                    <tr>
+                                        <td class="px-3 py-2">#{{ $importRun['id'] }}</td>
+                                        <td class="px-3 py-2">{{ $importRun['status_label'] }}</td>
+                                        <td class="px-3 py-2">{{ $importRun['total_rows'] }}</td>
+                                        <td class="px-3 py-2">{{ $importRun['imported_rows'] }}</td>
+                                        <td class="px-3 py-2">{{ $importRun['rejected_rows'] }}</td>
+                                        <td class="px-3 py-2">{{ $importRun['finished_at'] ?? '-' }}</td>
+                                        <td class="px-3 py-2">{{ $importRun['failure_message'] ?? '-' }}</td>
+                                    </tr>
+                                @endforeach
+                            </tbody>
+                        </table>
+                    </div>
+                @endif
+            </section>
 
             <section class="mt-6 rounded-lg border border-slate-200 p-4">
                 <h2 class="text-sm font-semibold text-slate-800">Ultimos relatorios</h2>

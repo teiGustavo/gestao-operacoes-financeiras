@@ -8,6 +8,7 @@ use App\Domain\Operation\OperationStatus;
 use App\Domain\Operation\OperationStatusTransitions;
 use App\Domain\Operation\ProductType;
 use App\Models\Agreement;
+use App\Models\OperationImportRun;
 use App\Models\OperationReportRun;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Pagination\LengthAwarePaginator as Paginator;
@@ -25,11 +26,16 @@ final class OperationListViewModel
      *     statusBlockedReasonsByCurrentStatus: array<string, array<string, string>>,
      *     productOptions: array<string, string>,
      *     agreementOptions: array<int, string>,
+     *     recentImportRuns: list<array{id:int,status:string,status_label:string,total_rows:int,imported_rows:int,rejected_rows:int,finished_at:string|null,failure_message:string|null}>,
      *     recentReportRuns: list<array{id:int,status:string,status_label:string,total_rows:int,finished_at:string|null,download_url:string|null,failure_message:string|null}>
      * }
      */
-    public function toArray(LengthAwarePaginator $operations, array $filters, ?Collection $reportRuns = null): array
-    {
+    public function toArray(
+        LengthAwarePaginator $operations,
+        array $filters,
+        ?Collection $importRuns = null,
+        ?Collection $reportRuns = null,
+    ): array {
         $statusOptions = collect(OperationStatus::cases())
             ->mapWithKeys(static fn (OperationStatus $status): array => [$status->value => $status->label()])
             ->all();
@@ -92,6 +98,18 @@ final class OperationListViewModel
                 ->orderBy('name')
                 ->pluck('name', 'id')
                 ->all(),
+            'recentImportRuns' => $importRuns?->map(function (OperationImportRun $operationImportRun): array {
+                return [
+                    'id' => $operationImportRun->id,
+                    'status' => $operationImportRun->status,
+                    'status_label' => $this->importStatusLabel((string) $operationImportRun->status),
+                    'total_rows' => (int) $operationImportRun->total_rows,
+                    'imported_rows' => (int) $operationImportRun->imported_rows,
+                    'rejected_rows' => (int) $operationImportRun->rejected_rows,
+                    'finished_at' => $operationImportRun->finished_at?->format('d/m/Y H:i:s'),
+                    'failure_message' => $operationImportRun->failure_message,
+                ];
+            })->values()->all() ?? [],
             'recentReportRuns' => $reportRuns?->map(function (OperationReportRun $operationReportRun): array {
                 return [
                     'id' => $operationReportRun->id,
@@ -115,6 +133,18 @@ final class OperationListViewModel
             OperationReportRun::STATUS_PROCESSING => 'Processando',
             OperationReportRun::STATUS_COMPLETED => 'Concluido',
             OperationReportRun::STATUS_FAILED => 'Falhou',
+            default => 'Desconhecido',
+        };
+    }
+
+    private function importStatusLabel(string $status): string
+    {
+        return match ($status) {
+            OperationImportRun::STATUS_PENDING => 'Pendente',
+            OperationImportRun::STATUS_PROCESSING => 'Processando',
+            OperationImportRun::STATUS_COMPLETED => 'Concluida',
+            OperationImportRun::STATUS_COMPLETED_WITH_ERRORS => 'Concluida com erros',
+            OperationImportRun::STATUS_FAILED => 'Falhou',
             default => 'Desconhecido',
         };
     }

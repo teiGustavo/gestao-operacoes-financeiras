@@ -4,6 +4,7 @@ use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\Auth\LogoutController;
 use App\Http\Controllers\Auth\ShowLoginController;
 use App\Http\Controllers\HomeController;
+use App\Http\Controllers\OperationCsvImportController;
 use App\Http\Controllers\OperationDetailsController;
 use App\Http\Controllers\OperationInstallmentPaymentController;
 use App\Http\Controllers\OperationListController;
@@ -22,6 +23,7 @@ Route::middleware('guest')->group(function () {
 Route::middleware('auth')->group(function () {
     Route::post('/logout', LogoutController::class)->name('logout');
     Route::get('/operations', OperationListController::class)->name('operations.index');
+    Route::post('/operations/import/csv', OperationCsvImportController::class)->name('operations.import.csv');
     Route::get('/operations/report/csv', OperationReportCsvExportController::class)->name('operations.report.csv');
     Route::get('/operations/report/csv/download/{operationReportRun}', OperationReportCsvDownloadController::class)
         ->name('operations.report.csv.download');

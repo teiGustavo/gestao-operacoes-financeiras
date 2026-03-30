@@ -8,6 +8,7 @@ use App\Domain\Operation\ProductType;
 use App\Models\Agreement;
 use App\Models\Client;
 use App\Models\Operation;
+use App\Models\OperationImportRun;
 use App\Models\OperationReportRun;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -256,9 +257,37 @@ it('shows recent report runs with download link when completed', function () {
         'failure_message' => 'arquivo temporario nao encontrado',
     ]);
 
+    OperationImportRun::query()->create([
+        'file_path' => storage_path('app/private/imports/a.csv'),
+        'status' => OperationImportRun::STATUS_COMPLETED,
+        'requested_by_user_id' => $user->id,
+        'queued_at' => now()->subMinute(),
+        'started_at' => now()->subSeconds(50),
+        'finished_at' => now(),
+        'total_rows' => 10,
+        'imported_rows' => 9,
+        'rejected_rows' => 1,
+    ]);
+
+    OperationImportRun::query()->create([
+        'file_path' => storage_path('app/private/imports/b.csv'),
+        'status' => OperationImportRun::STATUS_FAILED,
+        'requested_by_user_id' => $user->id,
+        'queued_at' => now()->subSeconds(40),
+        'started_at' => now()->subSeconds(30),
+        'finished_at' => now()->subSeconds(20),
+        'total_rows' => 0,
+        'imported_rows' => 0,
+        'rejected_rows' => 0,
+        'failure_message' => 'arquivo csv invalido',
+    ]);
+
     $this->actingAs($user)
         ->get(route('operations.index'))
         ->assertSuccessful()
+        ->assertSee('Ultimas importacoes')
+        ->assertSee('Concluida')
+        ->assertSee('arquivo csv invalido')
         ->assertSee('Ultimos relatorios')
         ->assertSee('Concluido')
         ->assertSee('Processando')

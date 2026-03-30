@@ -7,6 +7,7 @@ namespace App\Http\Controllers;
 use App\Http\Requests\ListOperationsRequest;
 use App\Http\Resources\Operation\OperationListResource;
 use App\Http\ViewModels\Operation\OperationListViewModel;
+use App\Infrastructure\Queries\Operation\OperationImportRunLatestQuery;
 use App\Infrastructure\Queries\Operation\OperationListQuery;
 use App\Infrastructure\Queries\Operation\OperationReportRunLatestQuery;
 use Illuminate\Contracts\View\View;
@@ -16,6 +17,7 @@ class OperationListController extends Controller
 {
     public function __construct(
         private readonly OperationListQuery $operationListQuery,
+        private readonly OperationImportRunLatestQuery $operationImportRunLatestQuery,
         private readonly OperationReportRunLatestQuery $operationReportRunLatestQuery,
         private readonly OperationListViewModel $operationListViewModel,
     ) {}
@@ -26,6 +28,10 @@ class OperationListController extends Controller
         $result = $this->operationListQuery->list($validatedFilters);
 
         if (! $request->expectsJson()) {
+            $importRuns = $this->operationImportRunLatestQuery->latestForUser(
+                userId: (int) $request->user()->id,
+            );
+
             $reportRuns = $this->operationReportRunLatestQuery->latestForUser(
                 userId: (int) $request->user()->id,
             );
@@ -33,6 +39,7 @@ class OperationListController extends Controller
             return view('operations.index', $this->operationListViewModel->toArray(
                 $result,
                 $validatedFilters,
+                $importRuns,
                 $reportRuns,
             ));
         }

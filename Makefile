@@ -75,15 +75,15 @@ report-status-latest: ## Exibe status do relatorio mais recente
 queue-work-imports: ## Processa fila imports no container app (manual/bloqueante)
 	$(COMPOSE_CMD) exec $(APP_SERVICE) php artisan queue:work --queue=imports,default --tries=3 --timeout=120
 
-queue-worker-start: ## Sobe mysql e o servico dedicado imports-worker
-	$(COMPOSE_CMD) up -d mysql imports-worker
+queue-worker-start: ## Sobe mysql e os servicos dedicados imports-worker
+	$(COMPOSE_CMD) up -d mysql imports-worker imports-worker-2 imports-worker-3 imports-worker-4
 
-queue-worker-stop: ## Para o servico dedicado imports-worker
-	$(COMPOSE_CMD) stop imports-worker
+queue-worker-stop: ## Para os servicos dedicados imports-worker
+	$(COMPOSE_CMD) stop imports-worker imports-worker-2 imports-worker-3 imports-worker-4
 
-queue-worker-status: ## Exibe status do container imports-worker
-	$(COMPOSE_CMD) ps imports-worker
+queue-worker-status: ## Exibe status dos containers imports-worker
+	$(COMPOSE_CMD) ps imports-worker imports-worker-2 imports-worker-3 imports-worker-4
 
-queue-monitor: ## Exibe logs em tempo real do imports-worker
-	$(COMPOSE_CMD) logs -f imports-worker
+queue-monitor: ## Exibe logs em tempo real dos imports-workers
+	$(COMPOSE_CMD) logs -f imports-worker imports-worker-2 imports-worker-3 imports-worker-4
 

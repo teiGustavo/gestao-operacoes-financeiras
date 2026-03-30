@@ -79,6 +79,14 @@ Para visualizar os dados iniciais, consulte a
 - Gerar automaticamente campos não presentes na planilha
 - Cada parcela deve ter intervalo de 1 mês (30 dias) em relação à parcela anterior
 - Suportar importação de até 50 mil registros
+- Os nomes de cada coluna devem seguir a convenção `snake_case`.
+- O sistema deve validar os tipos de dados, nome de cada coluna e formatos dos dados
+  (mas não obrigar a ordem em que devem ser informados) durante a importação, rejeitando
+  em caso de não conformidade com o cabeçalho (registrando erros para análise posterior).
+- Na rejeição de uma importação devido à validação de cabeçalho, deve ser informado: 
+  - Quais colunas estão faltando
+  - Quais estão com nome incorreto 
+  - Quais estão com dados em formato incorreto
 
 #### RF03 - Esteira de Operações (Listagem e Filtros)
 **Descrição:** O sistema deve exibir uma lista de operações com capacidade de filtros combinados.

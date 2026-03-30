@@ -12,21 +12,21 @@ Para visualizar os dados iniciais, consulte a
 
 ## Escolhas Gerais
 
-#### PHP 8.5: 
+### PHP 8.5:
 Foi escolhido pelas recentes melhorias na linguagem, segurança aprimorada, pipe operator `|>` e por ser a versão mais nova lançada. 
 Mesmo sendo a versão estável mais nova, ela já tem um tempo considerável de maturidade,
 pois foi lançada em Novembro/2025 e já possui patches de correção
 (o que a comunidade gosta de esperar antes de adotar uma nova versão).
 
-#### Filament: 
+### Filament:
 Escolhido para o otimizar o tempo e focar em performance/modelagem.
 
-#### Tailwind CSS:
+### Tailwind CSS:
 Para possibilitar o desenvolvimento mais otimizado e `mobile-first` 
 (o `Bootstrap` também permite, mas não tem o mesmo objetivo, 
 tendo foco principal em components `copy & use`).
 
-#### Arquitetura: 
+### Arquitetura:
 Mesmo que o Laravel tenha uma estrutura rígida de pastas,
 o projeto foi organizado visando o desacoplamento, a manutenibilidade e a escalabilidade,
 seguindo os princípios da `Clean Architecture` e alguns princípios
@@ -38,7 +38,7 @@ entidades de domínio / domínio rico).
   evitando quebrar a convenção do framework e, principalmente
   a compatibilidade com o ecossistema Laravel.
 
-#### Filosofia de Tratamento de Erros:
+### Filosofia de Tratamento de Erros:
 Os erros da aplicação estão divididos em dois tipos principais:
 
 - Erros Excepcionais: São erros inesperados que ocorrem durante a execução da aplicação, 
@@ -77,7 +77,7 @@ o que pode levar a código difícil de entender e manter.
   (onde, para economizar requests, é retornado um array contendo
   todos os erros encontrados).
 
-#### Filosofia das Movimentações/Operações: 
+### Filosofia das Movimentações/Operações:
 Em um cenário real,
 as movimentações/operacões financeiras são tratadas como eventos imutáveis, ou seja,
 uma vez que uma movimentação é registrada, ela não deve ser alterada,
@@ -97,7 +97,59 @@ as operações serão consideradas imutáveis, mas não será implementada uma l
 de movimentações incrementais 
 (pois seria necessária uma política de audit/sanit check).
 
-#### Arredondamento:
+### Importação de Dados - Complementando o descrito na [RF02](./levantamento-de-requisitos.md#rf02---importação-de-dados-em-lote)
+
+#### Divisão:
+A importação dos dados será dividida conforme as 3 etapas do `ETL` 
+(Extract, Transform, Load).
+
+Na etapa de `Extract`, os dados serão extraídos do arquivo Excel/CSV e serão salvos
+em uma tabela temporária no banco de dados, garantindo:
+- Consistência na importação
+- Velocidade (pois as linhas serão inseridas em lote, utilizando o recurso de
+  `bulk insert` do banco de dados)
+- Idempotência (pois a importação pode ser reprocessada sem causar 
+  duplicidade ou inconsistências nos dados)
+
+Na etapa de `Transform`, os dados serão transformados e validados, assinando cada linha
+(exemplo: marcar como "válida" ou "inválida").
+
+E, por fim, na etapa de `Load`, os dados serão carregados na tabela final através de
+uma transação otimizada.
+
+> Ao nível da implementação, como a importação é uma necessidade muito específica,
+  ela foi abstraída para uma query específica a fim de extrair o máximo de 
+  performance possível, otimizando a consulta SQL "na mão".
+  Além do próprio `DDD` permitir e até recomendar "esse tipo de decisão" 
+  (mesmo parecendo contraditório), a segregação dessa consulta SQL otimizada para
+  fora de um repositório genérico de operações de banco de dados se alinha aos 
+  princípios do `CQRS`¹ (Uma menção honrosa ao CQRS, que faz todo sentido em um cenário
+  de escala).
+  Mesmo que essa escolha gere acoplamento, ela é justificada pela necessidade 
+  de performance e pela natureza específica da importação.
+> 
+> ¹: O `CQRS` (Command Query Responsibility Segregation) é um padrão de arquitetura 
+  que separa as operações de leitura (queries) das operações de escrita (commands). 
+  Ele não foi implementado diretamente, assim como outras referências também não 
+  foram implementadas/seguidas à risca.
+
+#### Outras Considerações:
+Não obrigar a ordem de colunas no arquivo de importação tem a ver com a facilidade
+de uso do importador e também com a arquitetura, pois se a ordem não importa, 
+pode-se usar `Parallel Processing` ou múltiplos `Jobs` para processar o arquivo de forma
+ainda mais rápida e eficiente caso seja necessário (ou pertinente).
+
+Os campos diferentes não sofrerão tentativa de "normalização" pelo sistema, para
+evitar erros inesperados, inconsistências, e principalmente, para evitar que o 
+sistema tente "adivinhar" o que o usuário quis dizer.
+(Informar os dados para importação no formato esperado é responsabilidade do usuário).
+
+> Como optei por obrigar a convenção `snake_case`, os nomes das colunas do Excel/CSV
+  foram normalizados: 
+> - A coluna `taxa_juros (%)` foi renomeada para `taxa_juros`.
+> - A coluna `CPF` foi renomeada para `cpf`.
+
+### Regra de Arredondamento:
 Quando for necessário algum arredondamento, será adotado o `Arredondamento Bancário`
 (_Regra do Par_ / _Round Half to Even_) descrito na norma **NBR 5891:2014** e
 **Anexo B da ISO 80000-1**.

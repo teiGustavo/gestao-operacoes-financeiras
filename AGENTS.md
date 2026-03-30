@@ -42,6 +42,7 @@ This project has domain-specific skills available. You MUST activate the relevan
 - Stick to existing directory structure; don't create new base folders without approval.
 - Do not change the application's dependencies without approval.
 - Respect the layered structure under `app/`: `Domain/` (business rules), `Application/` (use cases), `Infrastructure/` (adapters), plus Eloquent models in `app/Models/`.
+- The CSV import entrypoint is `app/Console/Commands/ImportOperationsFromCsvCommand.php` (`operations:import`) and delegates into `app/Infrastructure/Import/*`; preserve this command -> importer -> persistence split when changing import flow.
 - Keep `app/Domain/` isolated from infrastructure details. Do not import `App\Infrastructure\`, `App\Models\`, `Illuminate\Database\`, or `Spatie\LaravelData\` in domain classes (enforced by `tests/Feature/LayeringTest.php`).
 - Keep `app/Application/` use cases isolated from Eloquent details. Do not import `App\Models\` or `Illuminate\Database\Eloquent\` in application classes (enforced by `tests/Feature/LayeringTest.php`).
 - Follow the repository binding pattern: domain repository interfaces are bound to infrastructure Eloquent repositories in `app/Providers/DomainInfrastructureServiceProvider.php`, and the provider is registered in `bootstrap/providers.php`.
@@ -91,6 +92,7 @@ This project has domain-specific skills available. You MUST activate the relevan
 - Read configuration values using dot notation: `php artisan config:show app.name`, `php artisan config:show database.default`. Or read config files directly from the `config/` directory.
 - To check environment variables, read the `.env` file directly.
 - If you are working through Docker, prefer the existing `Makefile` wrappers (`make artisan CMD='...'`, `make test ARGS='...'`, `make pint`) to run commands inside the `app` container.
+- For setup/bootstrap in Docker-first flows, use the project wrappers from `README.md` (`make up`, `make composer CMD='install'`, `make npm CMD='install'`).
 
 ## Tinker
 
@@ -103,6 +105,7 @@ This project has domain-specific skills available. You MUST activate the relevan
 # PHP
 
 - Always use curly braces for control structures, even for single-line bodies.
+- Follow the local file header convention: add `declare(strict_types=1);` immediately after `<?php` in project PHP files.
 - Use PHP 8 constructor property promotion: `public function __construct(public GitHub $github) { }`. Do not leave empty zero-parameter `__construct()` methods unless the constructor is private.
 - Use explicit return type declarations and type hints for all method parameters: `function isAccessible(User $user, ?string $path = null): bool`
 - Use TitleCase for Enum keys: `FavoritePerson`, `BestLake`, `Monthly`.
@@ -143,6 +146,7 @@ This project has domain-specific skills available. You MUST activate the relevan
 - When creating tests, make use of `php artisan make:test [options] {name}` to create a feature test, and pass `--unit` to create a unit test. Most tests should be feature tests.
 - Keep architecture guardrails covered: run `tests/Feature/LayeringTest.php` when changing classes under `app/Domain/`, `app/Application/`, or service providers.
 - Repository integration behavior is covered under `tests/Feature/Infrastructure/Repositories/*`; update/add tests there when changing repository bindings or persistence mappings.
+- CSV import behavior is covered in `tests/Feature/Import/ImportOperationsFromCsvCommandTest.php`; update this suite when changing `operations:import` or classes under `app/Infrastructure/Import/`.
 
 ## Vite Error
 

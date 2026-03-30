@@ -12,7 +12,6 @@ use Illuminate\Contracts\Queue\ShouldBeUnique;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
 use Illuminate\Support\Carbon;
-use Illuminate\Support\Collection;
 use Throwable;
 
 final class ProcessOperationCsvImportJob implements ShouldBeUnique, ShouldQueue
@@ -61,7 +60,11 @@ final class ProcessOperationCsvImportJob implements ShouldBeUnique, ShouldQueue
         try {
             $operationCsvImporter->ensureHeaderIsValid($operationImportRun->file_path);
 
-            $totalRows = $operationCsvImporter->countDataRows($operationImportRun->file_path);
+            $chunkPlan = $operationCsvImporter->buildChunkPlan(
+                filePath: $operationImportRun->file_path,
+                chunkSize: self::WORKER_LINES_CHUNK_SIZE,
+            );
+            $totalRows = $chunkPlan['total_rows'];
 
             $operationImportRun->forceFill([
                 'total_rows' => $totalRows,
@@ -83,8 +86,11 @@ final class ProcessOperationCsvImportJob implements ShouldBeUnique, ShouldQueue
                 return;
             }
 
-            $chunks = $this->buildChunkPayloads($operationImportRun->id, $totalRows);
-            OperationImportRunChunk::query()->insert($chunks->all());
+            $chunks = $this->buildChunkPayloads(
+                operationImportRunId: $operationImportRun->id,
+                chunkPlanChunks: $chunkPlan['chunks'],
+            );
+            OperationImportRunChunk::query()->insert($chunks);
 
             $chunkIds = OperationImportRunChunk::query()
                 ->where('operation_import_run_id', $operationImportRun->id)
@@ -111,24 +117,21 @@ final class ProcessOperationCsvImportJob implements ShouldBeUnique, ShouldQueue
     }
 
     /**
-     * @return Collection<int, array{operation_import_run_id:int,chunk_index:int,start_line_number:int,end_line_number:int,status:string,total_rows:int,imported_rows:int,rejected_rows:int,error_summary:null,metrics:null,failure_message:null,started_at:null,finished_at:null,created_at:Carbon,updated_at:Carbon}>
+     * @param  list<array{chunk_index:int,start_line_number:int,end_line_number:int,start_byte_offset:int}>  $chunkPlanChunks
+     * @return list<array{operation_import_run_id:int,chunk_index:int,start_line_number:int,end_line_number:int,start_byte_offset:int,status:string,total_rows:int,imported_rows:int,rejected_rows:int,error_summary:null,metrics:null,failure_message:null,started_at:null,finished_at:null,created_at:Carbon,updated_at:Carbon}>
      */
-    private function buildChunkPayloads(int $operationImportRunId, int $totalRows): Collection
+    private function buildChunkPayloads(int $operationImportRunId, array $chunkPlanChunks): array
     {
         $now = now();
-        $payloads = collect();
-        $chunkIndex = 1;
-        $dataRowStart = 1;
+        $payloads = [];
 
-        while ($dataRowStart <= $totalRows) {
-            $dataRowEnd = min($dataRowStart + self::WORKER_LINES_CHUNK_SIZE - 1, $totalRows);
-
-            $payloads->push([
+        foreach ($chunkPlanChunks as $chunk) {
+            $payloads[] = [
                 'operation_import_run_id' => $operationImportRunId,
-                'chunk_index' => $chunkIndex,
-                // +1 because line 1 is the CSV header.
-                'start_line_number' => $dataRowStart + 1,
-                'end_line_number' => $dataRowEnd + 1,
+                'chunk_index' => $chunk['chunk_index'],
+                'start_line_number' => $chunk['start_line_number'],
+                'end_line_number' => $chunk['end_line_number'],
+                'start_byte_offset' => $chunk['start_byte_offset'],
                 'status' => OperationImportRunChunk::STATUS_PENDING,
                 'total_rows' => 0,
                 'imported_rows' => 0,
@@ -140,10 +143,7 @@ final class ProcessOperationCsvImportJob implements ShouldBeUnique, ShouldQueue
                 'finished_at' => null,
                 'created_at' => $now,
                 'updated_at' => $now,
-            ]);
-
-            $dataRowStart = $dataRowEnd + 1;
-            $chunkIndex++;
+            ];
         }
 
         return $payloads;

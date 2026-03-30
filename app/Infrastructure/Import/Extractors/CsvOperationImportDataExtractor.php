@@ -11,8 +11,12 @@ use InvalidArgumentException;
 
 final class CsvOperationImportDataExtractor implements OperationImportDataExtractorInterface
 {
-    public function extract(string $filePath, ?int $startLineNumber = null, ?int $endLineNumber = null): ExtractedTabularData
-    {
+    public function extract(
+        string $filePath,
+        ?int $startLineNumber = null,
+        ?int $endLineNumber = null,
+        ?int $startByteOffset = null,
+    ): ExtractedTabularData {
         if (! is_file($filePath) || ! is_readable($filePath)) {
             throw new InvalidArgumentException('arquivo csv nao encontrado');
         }
@@ -33,11 +37,30 @@ final class CsvOperationImportDataExtractor implements OperationImportDataExtrac
 
         $headers = array_map(static fn ($value) => trim((string) $value), $headerRow);
 
+        $lineNumberBeforeFirstRead = 1;
+
+        if ($startByteOffset !== null) {
+            if ($startByteOffset < 0 || ($startLineNumber !== null && $startLineNumber < 2)) {
+                fclose($handle);
+
+                throw new InvalidArgumentException('intervalo de linhas invalido');
+            }
+
+            if (fseek($handle, $startByteOffset) !== 0) {
+                fclose($handle);
+
+                throw new InvalidArgumentException('intervalo de linhas invalido');
+            }
+
+            $lineNumberBeforeFirstRead = ($startLineNumber ?? 2) - 1;
+        }
+
         $rows = $this->streamRows(
             handle: $handle,
             headers: $headers,
             startLineNumber: $startLineNumber,
             endLineNumber: $endLineNumber,
+            lineNumberBeforeFirstRead: $lineNumberBeforeFirstRead,
         );
 
         return new ExtractedTabularData(headers: $headers, rows: $rows);
@@ -48,10 +71,16 @@ final class CsvOperationImportDataExtractor implements OperationImportDataExtrac
      * @param  list<string>  $headers
      * @param  int<2, max>|null  $startLineNumber
      * @param  int<2, max>|null  $endLineNumber
+     * @param  int<1, max>  $lineNumberBeforeFirstRead
      * @return Generator<int, array{lineNumber:int,row:array<string,string>}>
      */
-    private function streamRows($handle, array $headers, ?int $startLineNumber, ?int $endLineNumber): Generator
-    {
+    private function streamRows(
+        $handle,
+        array $headers,
+        ?int $startLineNumber,
+        ?int $endLineNumber,
+        int $lineNumberBeforeFirstRead,
+    ): Generator {
         if ($startLineNumber !== null && $startLineNumber < 2) {
             throw new InvalidArgumentException('intervalo de linhas invalido');
         }
@@ -64,7 +93,7 @@ final class CsvOperationImportDataExtractor implements OperationImportDataExtrac
             throw new InvalidArgumentException('intervalo de linhas invalido');
         }
 
-        $lineNumber = 1;
+        $lineNumber = $lineNumberBeforeFirstRead;
 
         try {
             while (($csvRow = fgetcsv($handle)) !== false) {

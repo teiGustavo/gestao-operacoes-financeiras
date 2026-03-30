@@ -126,6 +126,13 @@ Um arquivo `Makefile` foi criado para facilitar a configuração do ambiente.
 
 ### Importação CSV assíncrona (fila)
 
+Resumo da implementação atual (performance):
+
+- A importação é orquestrada por execução (`operation_import_runs`) e dividida em chunks de `10.000` linhas.
+- Cada chunk é processado por um job dedicado em paralelo (`ProcessOperationCsvImportChunkJob`).
+- O orquestrador persiste `start_line_number`, `end_line_number` e `start_byte_offset` por chunk (`operation_import_run_chunks`).
+- Cada worker faz `seek` direto para o início do seu trecho no arquivo, evitando releitura completa do CSV nos chunks tardios.
+
 Fluxo recomendado (worker dedicado):
 
 ```bash
@@ -139,6 +146,8 @@ Para aumentar/reduzir concorrência dos workers:
 ```bash
 make queue-worker-start IMPORT_WORKERS=8
 ```
+
+> Quanto maior `IMPORT_WORKERS`, maior o paralelismo efetivo dos chunks (limitado por CPU/IO/DB).
 
 Fluxo one-shot (execução única/manual):
 
@@ -182,6 +191,15 @@ make queue-worker-stop
 ```
 
 > O `imports-worker` aguarda o `mysql` ficar saudável antes de iniciar.
+
+## 📦 Limites de Upload (UI/API)
+
+Para suportar uploads de CSV maiores no ambiente Docker local, o container PHP aplica:
+
+- `post_max_size=32M`
+- `upload_max_filesize=32M`
+
+Arquivo de configuração: `docker/php/uploads.ini`.
 
 Detalhes operacionais e troubleshooting em [Gerenciamento de Fila](docs/queue-management.md).
 

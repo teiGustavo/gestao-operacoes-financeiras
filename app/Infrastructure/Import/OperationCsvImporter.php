@@ -73,6 +73,7 @@ class OperationCsvImporter
         ?int $operationImportRunId = null,
         ?int $startLineNumber = null,
         ?int $endLineNumber = null,
+        ?int $startByteOffset = null,
         bool $shouldValidateHeader = true,
     ): array {
         $totalStart = microtime(true);
@@ -82,6 +83,7 @@ class OperationCsvImporter
             filePath: $filePath,
             startLineNumber: $startLineNumber,
             endLineNumber: $endLineNumber,
+            startByteOffset: $startByteOffset,
         );
         $extractElapsed = microtime(true) - $extractStart;
 
@@ -219,8 +221,15 @@ class OperationCsvImporter
         ];
     }
 
-    public function countDataRows(string $filePath): int
+    /**
+     * @return array{total_rows:int,chunks:list<array{chunk_index:int,start_line_number:int,end_line_number:int,start_byte_offset:int}>}
+     */
+    public function buildChunkPlan(string $filePath, int $chunkSize): array
     {
+        if ($chunkSize <= 0) {
+            throw new InvalidArgumentException('chunk_size invalido');
+        }
+
         if (! is_file($filePath) || ! is_readable($filePath)) {
             throw new InvalidArgumentException('arquivo csv nao encontrado');
         }
@@ -231,15 +240,81 @@ class OperationCsvImporter
             throw new InvalidArgumentException('arquivo csv nao pode ser lido');
         }
 
-        $lineCount = 0;
+        $headerRow = fgetcsv($handle);
 
-        while (fgets($handle) !== false) {
-            $lineCount++;
+        if (! is_array($headerRow)) {
+            fclose($handle);
+
+            throw new InvalidArgumentException('formato csv invalido');
+        }
+
+        $lineNumber = 1;
+        $totalRows = 0;
+        $rowsInChunk = 0;
+        $chunkIndex = 1;
+        $chunkStartLineNumber = null;
+        $chunkStartByteOffset = null;
+        $chunks = [];
+
+        while (true) {
+            $rowByteOffset = ftell($handle);
+
+            if (! is_int($rowByteOffset)) {
+                fclose($handle);
+
+                throw new InvalidArgumentException('formato csv invalido');
+            }
+
+            $csvRow = fgetcsv($handle);
+
+            if ($csvRow === false) {
+                break;
+            }
+
+            $lineNumber++;
+
+            if ($csvRow === [null] || $csvRow === []) {
+                continue;
+            }
+
+            if ($rowsInChunk === 0) {
+                $chunkStartLineNumber = $lineNumber;
+                $chunkStartByteOffset = $rowByteOffset;
+            }
+
+            $rowsInChunk++;
+            $totalRows++;
+
+            if ($rowsInChunk >= $chunkSize) {
+                $chunks[] = [
+                    'chunk_index' => $chunkIndex,
+                    'start_line_number' => $chunkStartLineNumber,
+                    'end_line_number' => $lineNumber,
+                    'start_byte_offset' => $chunkStartByteOffset,
+                ];
+
+                $chunkIndex++;
+                $rowsInChunk = 0;
+                $chunkStartLineNumber = null;
+                $chunkStartByteOffset = null;
+            }
+        }
+
+        if ($rowsInChunk > 0 && $chunkStartLineNumber !== null && $chunkStartByteOffset !== null) {
+            $chunks[] = [
+                'chunk_index' => $chunkIndex,
+                'start_line_number' => $chunkStartLineNumber,
+                'end_line_number' => $lineNumber,
+                'start_byte_offset' => $chunkStartByteOffset,
+            ];
         }
 
         fclose($handle);
 
-        return max(0, $lineCount - 1);
+        return [
+            'total_rows' => $totalRows,
+            'chunks' => $chunks,
+        ];
     }
 
     /**

@@ -59,6 +59,7 @@ final class ProcessOperationCsvImportChunkJob implements ShouldBeUnique, ShouldQ
                 operationImportRunId: $chunk->operation_import_run_id,
                 startLineNumber: $chunk->start_line_number,
                 endLineNumber: $chunk->end_line_number,
+                startByteOffset: $chunk->start_byte_offset,
                 shouldValidateHeader: false,
             );
 

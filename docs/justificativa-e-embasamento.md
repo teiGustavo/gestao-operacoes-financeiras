@@ -107,22 +107,19 @@ de movimentações incrementais
 ### Importação de Dados - Complementando o descrito na [RF02](./levantamento-de-requisitos.md#rf02---importação-de-dados-em-lote)
 
 #### Divisão:
-A importação dos dados será dividida conforme as 3 etapas do `ETL` 
-(Extract, Transform, Load).
+A importação dos dados foi implementada em fluxo assíncrono e paralelizável, mantendo
+uma separação prática equivalente ao `ETL`:
 
-Na etapa de `Extract`, os dados serão extraídos do arquivo Excel/CSV e serão salvos
-em uma tabela temporária no banco de dados, garantindo:
-- Consistência na importação
-- Velocidade (pois as linhas serão inseridas em lote, utilizando o recurso de
-  `bulk insert` do banco de dados)
-- Idempotência (pois a importação pode ser reprocessada sem causar 
-  duplicidade ou inconsistências nos dados)
+- `Extract/Plan`: leitura do CSV e planejamento de chunks de `10.000` linhas.
+- `Transform`: validação e normalização linha a linha por worker.
+- `Load`: persistência em lote (bulk operations + parcelas) e finalização agregada.
 
-Na etapa de `Transform`, os dados serão transformados e validados, assinando cada linha
-(exemplo: marcar como "válida" ou "inválida").
+Na prática, cada execução de importação cria registros em `operation_import_runs` e
+`operation_import_run_chunks`, com `start_line_number`, `end_line_number` e
+`start_byte_offset` por chunk.
 
-E, por fim, na etapa de `Load`, os dados serão carregados na tabela final através de
-uma transação otimizada.
+Com isso, cada worker processa apenas seu trecho do arquivo e pode iniciar com `seek`
+direto no byte de início do chunk, reduzindo I/O redundante em arquivos grandes.
 
 > Ao nível da implementação, como a importação é uma necessidade muito específica,
   ela foi abstraída para uma query específica a fim de extrair o máximo de 
@@ -142,9 +139,11 @@ uma transação otimizada.
 
 #### Outras Considerações:
 Não obrigar a ordem de colunas no arquivo de importação tem a ver com a facilidade
-de uso do importador e também com a arquitetura, pois se a ordem não importa, 
-pode-se usar `Parallel Processing` ou múltiplos `Jobs` para processar o arquivo de forma
-ainda mais rápida e eficiente caso seja necessário (ou pertinente).
+de uso do importador e com a arquitetura já adotada, que hoje executa `Parallel Processing`
+com múltiplos jobs por chunk.
+
+Apesar da execução paralela, a importação ainda não é idempotente por arquivo
+(reimportar o mesmo CSV pode gerar novas operações), limitação já mapeada para evolução.
 
 Os campos diferentes não sofrerão tentativa de "normalização" pelo sistema, para
 evitar erros inesperados, inconsistências, e principalmente, para evitar que o 

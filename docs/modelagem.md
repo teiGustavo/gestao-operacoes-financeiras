@@ -376,7 +376,37 @@ difícil de implementar).
 **Foreign Keys:**
 - `CONSTRAINT fk_operation_import_staging_rows_run_id FOREIGN KEY (operation_import_run_id) REFERENCES operation_import_runs(id) ON DELETE CASCADE`
 
-### 11. OperationReportRuns (Execuções de Exportação de Relatórios)
+### 11. OperationImportRunChunks (Chunks de Execução da Importação)
+
+**Colunas:**
+- `id`: PK, BigInt, Auto Increment
+- `operation_import_run_id`: FK, BigInt, NOT NULL
+- `chunk_index`: Unsigned Int, NOT NULL
+- `start_line_number`: Unsigned Int, NOT NULL
+- `end_line_number`: Unsigned Int, NOT NULL
+- `start_byte_offset`: Unsigned BigInt, Nullable
+- `status`: Varchar(255), NOT NULL
+- `total_rows`: Unsigned Int, Default=0, NOT NULL
+- `imported_rows`: Unsigned Int, Default=0, NOT NULL
+- `rejected_rows`: Unsigned Int, Default=0, NOT NULL
+- `error_summary`: JSON, Nullable
+- `metrics`: JSON, Nullable
+- `failure_message`: Text, Nullable
+- `started_at`: Timestamp, Nullable
+- `finished_at`: Timestamp, Nullable
+- `created_at`: Timestamp, Default=CURRENT_TIMESTAMP
+- `updated_at`: Timestamp, Default=CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+
+**Índices:**
+- `UNIQUE KEY idx_oirc_run_chunk (operation_import_run_id, chunk_index)`
+- `KEY idx_oirc_run_status (operation_import_run_id, status)`
+
+**Foreign Keys:**
+- `CONSTRAINT fk_operation_import_run_chunks_run_id FOREIGN KEY (operation_import_run_id) REFERENCES operation_import_runs(id) ON DELETE CASCADE`
+
+> O campo `start_byte_offset` permite leitura otimizada por chunk (seek direto no início do trecho), reduzindo releitura de arquivo em workers tardios.
+
+### 12. OperationReportRuns (Execuções de Exportação de Relatórios)
 
 **Colunas:**
 - `id`: PK, BigInt, Auto Increment
@@ -422,6 +452,7 @@ Os índices compostos foram estrategicamente projetados para:
 - **`status_histories` → `users`**: `ON DELETE RESTRICT` → Impede exclusão de usuários com histórico de alterações (auditoria)
 - **`operation_import_run_errors` → `operation_import_runs`**: `ON DELETE CASCADE` → Erros detalhados são removidos junto com a execução de importação
 - **`operation_import_staging_rows` → `operation_import_runs`**: `ON DELETE CASCADE` → Linhas auxiliares de staging são removidas junto com a execução
+- **`operation_import_run_chunks` → `operation_import_runs`**: `ON DELETE CASCADE` → Chunks e métricas por chunk são removidos junto com a execução
 - **`operation_report_runs` → `users`**: `ON DELETE SET NULL` → Mantém histórico de exportações mesmo se o usuário for removido
 
 > Casos como a deleção de um cliente ou conveniada com operações ativas, 
@@ -504,5 +535,7 @@ Para consultar a definição de cada `product_type`: [RF05: Análise de Operaç�
 - Um `erro por linha` pertence a uma `execução de importação` → `(N:1)`
 - Uma `execução de importação` pode ter várias `linhas de staging` → `(1:N)`
 - Uma `linha de staging` pertence a uma `execução de importação` → `(N:1)`
+- Uma `execução de importação` pode ter vários `chunks de processamento` → `(1:N)`
+- Um `chunk de processamento` pertence a uma `execução de importação` → `(N:1)`
 - Um `usuário` pode solicitar várias `execuções de relatório` → `(1:N)`
 - Uma `execução de relatório` pode pertencer a um `usuário` solicitante → `(N:1)`

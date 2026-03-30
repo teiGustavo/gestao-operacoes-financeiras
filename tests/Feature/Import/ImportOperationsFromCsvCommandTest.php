@@ -295,8 +295,11 @@ it('splits large imports into workers of ten thousand data rows', function () {
     expect($chunks)->toHaveCount(2)
         ->and($chunks[0]->start_line_number)->toBe(2)
         ->and($chunks[0]->end_line_number)->toBe(10_001)
+        ->and($chunks[0]->start_byte_offset)->toBeInt()
         ->and($chunks[1]->start_line_number)->toBe(10_002)
-        ->and($chunks[1]->end_line_number)->toBe(10_002);
+        ->and($chunks[1]->end_line_number)->toBe(10_002)
+        ->and($chunks[1]->start_byte_offset)->toBeInt()
+        ->and($chunks[1]->start_byte_offset)->toBeGreaterThan($chunks[0]->start_byte_offset);
 });
 
 /**

@@ -13,6 +13,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
     'chunk_index',
     'start_line_number',
     'end_line_number',
+    'start_byte_offset',
     'status',
     'total_rows',
     'imported_rows',
@@ -43,6 +44,7 @@ class OperationImportRunChunk extends Model
         return [
             'error_summary' => 'array',
             'metrics' => 'array',
+            'start_byte_offset' => 'integer',
             'started_at' => 'datetime',
             'finished_at' => 'datetime',
         ];

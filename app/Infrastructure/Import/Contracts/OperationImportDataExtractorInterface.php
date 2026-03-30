@@ -8,5 +8,10 @@ use App\Infrastructure\Import\Data\ExtractedTabularData;
 
 interface OperationImportDataExtractorInterface
 {
-    public function extract(string $filePath, ?int $startLineNumber = null, ?int $endLineNumber = null): ExtractedTabularData;
+    public function extract(
+        string $filePath,
+        ?int $startLineNumber = null,
+        ?int $endLineNumber = null,
+        ?int $startByteOffset = null,
+    ): ExtractedTabularData;
 }

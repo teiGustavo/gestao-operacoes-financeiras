@@ -79,6 +79,7 @@ Para visualizar os dados iniciais, consulte a
 - Gerar automaticamente campos não presentes na planilha
 - Cada parcela deve ter intervalo de 1 mês (30 dias) em relação à parcela anterior
 - Suportar importação de até 50 mil registros
+- Executar importação de forma assíncrona, com processamento paralelo em chunks (lotes) para reduzir tempo total
 - Os nomes de cada coluna devem seguir a convenção `snake_case`.
 - O sistema deve validar os tipos de dados, nome de cada coluna e formatos dos dados
   (mas não obrigar a ordem em que devem ser informados) durante a importação, rejeitando
@@ -223,6 +224,7 @@ $$
 
 **Critérios:**
 - Importação de 50 mil registros deve ser concluída em tempo aceitável (< 5 minutos)
+- Permitir escalar workers de fila para aumentar throughput de importação (sem alterar regra de negócio)
 - Listagem de operações deve carregar em menos de 2 segundos
 - Filtros devem responder em menos de 1 segundo
 - Utilizar índices adequados no banco de dados

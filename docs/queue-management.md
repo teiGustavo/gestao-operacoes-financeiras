@@ -8,6 +8,17 @@ O projeto usa fila em banco (`QUEUE_CONNECTION=database`) e o serviço `imports-
 - importação CSV de operações;
 - exportação CSV de relatórios.
 
+## Como a importação paralela funciona
+
+- O job orquestrador (`ProcessOperationCsvImportJob`) valida o cabeçalho e divide o arquivo em chunks de `10.000` linhas.
+- Os chunks são registrados em `operation_import_run_chunks` com:
+  - `start_line_number`
+  - `end_line_number`
+  - `start_byte_offset`
+- Cada worker (`ProcessOperationCsvImportChunkJob`) processa somente seu range.
+- O `start_byte_offset` permite `fseek` direto no trecho do worker, evitando releitura do CSV desde o início em chunks tardios.
+- O job `FinalizeOperationCsvImportRunJob` agrega métricas/erros dos chunks e conclui a execução.
+
 ## Por que usar um serviço separado no docker-compose?
 
 Sim, é necessário para o fluxo assíncrono ficar estável no ambiente local:
@@ -55,6 +66,8 @@ Para ajustar a concorrência dos workers em importações grandes:
 ```bash
 make queue-worker-start IMPORT_WORKERS=8
 ```
+
+> Dica: escale gradualmente (ex.: 4 → 8 → 12) e monitore `mysql`/CPU/IO para achar o ponto de melhor throughput.
 
 ### Exportação CSV de relatório
 
@@ -114,5 +127,7 @@ make artisan CMD='queue:flush'
 - `docker-compose.yml`
 - `Makefile`
 - `app/Infrastructure/Import/Jobs/ProcessOperationCsvImportJob.php`
+- `app/Infrastructure/Import/Jobs/ProcessOperationCsvImportChunkJob.php`
+- `app/Infrastructure/Import/Jobs/FinalizeOperationCsvImportRunJob.php`
 - `app/Infrastructure/Report/Jobs/ProcessOperationCsvExportJob.php`
 

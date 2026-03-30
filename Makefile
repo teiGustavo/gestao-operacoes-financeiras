@@ -5,8 +5,10 @@ CMD ?=
 ARGS ?=
 FILE ?=
 RUN_ID ?=
+REQUESTED_BY_USER_ID ?=
+REQUESTED_BY_USER_ID_OPTION := $(if $(REQUESTED_BY_USER_ID),--requested-by-user-id=$(REQUESTED_BY_USER_ID),)
 
-.PHONY: help up down restart build ps logs shell artisan migrate test pint composer npm import import-run import-status import-status-latest queue-work-imports
+.PHONY: help up down restart build ps logs shell artisan migrate test pint composer npm import import-run import-status import-status-latest queue-work-imports queue-worker-start queue-worker-stop queue-worker-status queue-monitor
 
 help: ## Lista os comandos disponíveis
 	@awk 'BEGIN {FS = ":.*##"; printf "Comandos:\n"} /^[a-zA-Z_-]+:.*##/ {printf "  %-12s %s\n", $$1, $$2}' $(MAKEFILE_LIST)
@@ -50,11 +52,11 @@ composer: ## Executa Composer (use CMD='require pacote')
 npm: ## Executa npm (use CMD='install')
 	$(COMPOSE_CMD) exec $(APP_SERVICE) npm $(CMD)
 
-import: ## Enfileira importacao CSV (use FILE='/caminho/arquivo.csv')
-	$(COMPOSE_CMD) exec $(APP_SERVICE) php artisan operations:import $(FILE)
+import: ## Enfileira importacao CSV (opcional: REQUESTED_BY_USER_ID='1')
+	$(COMPOSE_CMD) exec $(APP_SERVICE) php artisan operations:import $(FILE) $(REQUESTED_BY_USER_ID_OPTION)
 
-import-run: ## Enfileira CSV, processa fila ate esvaziar e exibe o ultimo status (use FILE='/caminho/arquivo.csv')
-	$(COMPOSE_CMD) exec $(APP_SERVICE) php artisan operations:import $(FILE)
+import-run: ## Fluxo one-shot: enfileira CSV, processa fila no app ate esvaziar e mostra ultimo status
+	$(COMPOSE_CMD) exec $(APP_SERVICE) php artisan operations:import $(FILE) $(REQUESTED_BY_USER_ID_OPTION)
 	$(COMPOSE_CMD) exec $(APP_SERVICE) php artisan queue:work --queue=imports,default --tries=3 --timeout=120 --stop-when-empty
 	$(COMPOSE_CMD) exec $(APP_SERVICE) php artisan operations:import:status-latest
 
@@ -64,6 +66,18 @@ import-status: ## Exibe status da importacao (use RUN_ID='1')
 import-status-latest: ## Exibe status da importacao mais recente
 	$(COMPOSE_CMD) exec $(APP_SERVICE) php artisan operations:import:status-latest
 
-queue-work-imports: ## Processa fila de importacao (queue imports)
+queue-work-imports: ## Processa fila imports no container app (manual/bloqueante)
 	$(COMPOSE_CMD) exec $(APP_SERVICE) php artisan queue:work --queue=imports,default --tries=3 --timeout=120
+
+queue-worker-start: ## Sobe mysql e o servico dedicado imports-worker
+	$(COMPOSE_CMD) up -d mysql imports-worker
+
+queue-worker-stop: ## Para o servico dedicado imports-worker
+	$(COMPOSE_CMD) stop imports-worker
+
+queue-worker-status: ## Exibe status do container imports-worker
+	$(COMPOSE_CMD) ps imports-worker
+
+queue-monitor: ## Exibe logs em tempo real do imports-worker
+	$(COMPOSE_CMD) logs -f imports-worker
 

@@ -9,6 +9,8 @@ use App\Infrastructure\Import\Contracts\OperationImportDataExtractorInterface;
 use App\Infrastructure\Import\Contracts\OperationImportRowPersisterInterface;
 use App\Infrastructure\Import\Validators\OperationImportHeaderValidator;
 use App\Infrastructure\Import\Validators\OperationImportRowValidator;
+use App\Models\OperationImportRunError;
+use App\Models\OperationImportStagingRow;
 use InvalidArgumentException;
 
 class OperationCsvImporter
@@ -66,7 +68,7 @@ class OperationCsvImporter
      *
      * @throws InvalidArgumentException | InfrastructureUnavailableException
      */
-    public function importWithSummary(string $filePath): array
+    public function importWithSummary(string $filePath, ?int $operationImportRunId = null): array
     {
         $totalStart = microtime(true);
 
@@ -99,17 +101,51 @@ class OperationCsvImporter
             try {
                 foreach ($extractedData->rows as $extractedRow) {
                     $totalRows++;
+                    $lineNumber = $extractedRow['lineNumber'];
+
+                    $this->upsertStagingRow(
+                        operationImportRunId: $operationImportRunId,
+                        lineNumber: $lineNumber,
+                        rowPayload: $extractedRow['row'],
+                        status: OperationImportStagingRow::STATUS_PENDING,
+                    );
 
                     try {
                         $rowValidationStart = microtime(true);
-                        $validatedRowsChunk[] = $this->validateAndNormalizeRow(
-                            row: $extractedRow['row'],
-                            lineNumber: $extractedRow['lineNumber'],
+                        $validatedRowsChunk[] = [
+                            'line_number' => $lineNumber,
+                            'row' => $this->validateAndNormalizeRow(
+                                row: $extractedRow['row'],
+                                lineNumber: $lineNumber,
+                            ),
+                        ];
+
+                        $this->upsertStagingRow(
+                            operationImportRunId: $operationImportRunId,
+                            lineNumber: $lineNumber,
+                            rowPayload: $extractedRow['row'],
+                            status: OperationImportStagingRow::STATUS_VALIDATED,
                         );
+
                         $rowValidationElapsed += microtime(true) - $rowValidationStart;
                     } catch (InvalidArgumentException $invalidArgumentException) {
                         $rejectedRows++;
                         $this->appendErrorSummary($errorSummary, $invalidArgumentException->getMessage());
+                        $this->recordRowError(
+                            operationImportRunId: $operationImportRunId,
+                            lineNumber: $lineNumber,
+                            message: $invalidArgumentException->getMessage(),
+                            rowPayload: $extractedRow['row'],
+                        );
+
+                        $this->upsertStagingRow(
+                            operationImportRunId: $operationImportRunId,
+                            lineNumber: $lineNumber,
+                            rowPayload: $extractedRow['row'],
+                            status: OperationImportStagingRow::STATUS_REJECTED,
+                            errorMessage: $invalidArgumentException->getMessage(),
+                            processedAtNow: true,
+                        );
 
                         continue;
                     }
@@ -120,12 +156,19 @@ class OperationCsvImporter
                             persistElapsed: $persistElapsed,
                             persistedRows: $importedRows,
                             persistBreakdown: $persistBreakdown,
+                            operationImportRunId: $operationImportRunId,
                         );
                     }
                 }
             } catch (InvalidArgumentException $invalidArgumentException) {
                 $rejectedRows++;
                 $this->appendErrorSummary($errorSummary, $invalidArgumentException->getMessage());
+                $this->recordRowError(
+                    operationImportRunId: $operationImportRunId,
+                    lineNumber: null,
+                    message: $invalidArgumentException->getMessage(),
+                    rowPayload: null,
+                );
             }
 
             $this->persistValidatedRowsChunk(
@@ -133,6 +176,7 @@ class OperationCsvImporter
                 persistElapsed: $persistElapsed,
                 persistedRows: $importedRows,
                 persistBreakdown: $persistBreakdown,
+                operationImportRunId: $operationImportRunId,
             );
         } catch (InvalidArgumentException $invalidArgumentException) {
             throw $invalidArgumentException;
@@ -176,7 +220,7 @@ class OperationCsvImporter
     }
 
     /**
-     * @param  list<array<string, string>>  $validatedRowsChunk
+     * @param  list<array{line_number:int,row:array<string,string>}>  $validatedRowsChunk
      * @param  array{upsert_clients:float,upsert_agreements:float,load_client_ids:float,insert_operations:float,insert_installments:float,total:float}  $persistBreakdown
      */
     private function persistValidatedRowsChunk(
@@ -184,15 +228,31 @@ class OperationCsvImporter
         float &$persistElapsed,
         int &$persistedRows,
         array &$persistBreakdown,
+        ?int $operationImportRunId,
     ): void {
         if ($validatedRowsChunk === []) {
             return;
         }
 
+        $rowsToPersist = array_column($validatedRowsChunk, 'row');
+
         $persistStart = microtime(true);
-        $chunkBreakdown = $this->operationImportRowPersister->persistMany($validatedRowsChunk);
+        $chunkBreakdown = $this->operationImportRowPersister->persistMany($rowsToPersist);
         $persistElapsed += microtime(true) - $persistStart;
-        $persistedRows += count($validatedRowsChunk);
+        $persistedRows += count($rowsToPersist);
+
+        if ($operationImportRunId !== null) {
+            $persistedLineNumbers = array_column($validatedRowsChunk, 'line_number');
+
+            OperationImportStagingRow::query()
+                ->where('operation_import_run_id', $operationImportRunId)
+                ->whereIn('line_number', $persistedLineNumbers)
+                ->update([
+                    'status' => OperationImportStagingRow::STATUS_PERSISTED,
+                    'processed_at' => now(),
+                    'error_message' => null,
+                ]);
+        }
 
         foreach ($chunkBreakdown as $metric => $elapsed) {
             $persistBreakdown[$metric] += $elapsed;
@@ -207,5 +267,55 @@ class OperationCsvImporter
     private function appendErrorSummary(array &$errorSummary, string $message): void
     {
         $errorSummary[$message] = ($errorSummary[$message] ?? 0) + 1;
+    }
+
+    /**
+     * @param  array<string, string>|null  $rowPayload
+     */
+    private function recordRowError(
+        ?int $operationImportRunId,
+        ?int $lineNumber,
+        string $message,
+        ?array $rowPayload,
+    ): void {
+        if ($operationImportRunId === null) {
+            return;
+        }
+
+        OperationImportRunError::query()->create([
+            'operation_import_run_id' => $operationImportRunId,
+            'line_number' => $lineNumber,
+            'message' => $message,
+            'row_payload' => $rowPayload,
+        ]);
+    }
+
+    /**
+     * @param  array<string, string>  $rowPayload
+     */
+    private function upsertStagingRow(
+        ?int $operationImportRunId,
+        int $lineNumber,
+        array $rowPayload,
+        string $status,
+        ?string $errorMessage = null,
+        bool $processedAtNow = false,
+    ): void {
+        if ($operationImportRunId === null) {
+            return;
+        }
+
+        OperationImportStagingRow::query()->updateOrCreate(
+            [
+                'operation_import_run_id' => $operationImportRunId,
+                'line_number' => $lineNumber,
+            ],
+            [
+                'row_payload' => $rowPayload,
+                'status' => $status,
+                'error_message' => $errorMessage,
+                'processed_at' => $processedAtNow ? now() : null,
+            ],
+        );
     }
 }

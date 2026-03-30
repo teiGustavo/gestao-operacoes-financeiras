@@ -5,7 +5,7 @@
   ou pronto para produção. 
   O objetivo principal deste projeto é demonstrar habilidades técnicas, sendo assim
   algumas escolhas foram feitas visando a clareza e a demonstração de boas práticas,
-  mesmo que isso não seja possível em todas as situações cotidianas (devido à prazo, 
+  mesmo que isso não seja possível em todas as situações cotidianas (seja por: prazo, 
   escopo, padrões já estabelecidos, base legada e etc).
 >  
 > **Resumindo: O teste foi tratado como prova de fogo, a fim de demonstrar as minhas
@@ -83,8 +83,7 @@ Um arquivo `Makefile` foi criado para facilitar a configuração do ambiente.
 7. Execute `make artisan CMD='key:generate'` para gerar a chave de aplicação do Laravel.
 8. Execute `make artisan CMD='migrate'` para criar as tabelas no banco de dados.
 
-> Os comandos de `composer install` e `npm install` são opcionais na primeira execução, 
-pois o `Dockerfile` já se encarrega de instalar as dependências no boot.
+> Os comandos de `composer install` e `npm install` são necessários para preparar o ambiente local.
 
 ### Glossário dos comandos do `Makefile`:
 
@@ -101,11 +100,15 @@ pois o `Dockerfile` já se encarrega de instalar as dependências no boot.
 - `make pint`: Formata o código com Pint
 - `make composer CMD='...'`: Executa comandos do Composer dentro do container
 - `make npm CMD='...'`: Executa comandos do npm dentro do container
-- `make import FILE='/caminho/arquivo.csv'`: Enfileira a importação CSV assíncrona
-- `make import-run FILE='/caminho/arquivo.csv'`: Enfileira, processa a fila até esvaziar e exibe o último status
+- `make import FILE='/caminho/arquivo.csv' REQUESTED_BY_USER_ID='1'`: Enfileira a importação CSV assíncrona (opcionalmente vinculada a um usuário solicitante)
+- `make import-run FILE='/caminho/arquivo.csv' REQUESTED_BY_USER_ID='1'`: Fluxo one-shot (enfileira, processa fila no `app` até esvaziar e exibe o último status)
 - `make import-status RUN_ID='1'`: Exibe status de uma execução de importação
 - `make import-status-latest`: Exibe status da execução de importação mais recente
-- `make queue-work-imports`: Processa a fila de importação (`imports`)
+- `make queue-work-imports`: Processa a fila `imports` no container `app` (manual/bloqueante)
+- `make queue-worker-start`: Sobe `mysql` e o serviço dedicado `imports-worker`
+- `make queue-worker-stop`: Para o serviço `imports-worker`
+- `make queue-worker-status`: Mostra status do container `imports-worker`
+- `make queue-monitor`: Mostra logs em tempo real do `imports-worker`
 
 > Para mais detalhes, consulte o arquivo [Makefile](./Makefile) no repositório.
 
@@ -119,34 +122,40 @@ pois o `Dockerfile` já se encarrega de instalar as dependências no boot.
 
 ### Importação CSV assíncrona (fila)
 
-#### Opção rápida (one-shot):
-
-- `make import-run FILE='/caminho/arquivo.csv'`
-
-#### Opção detalhada (passo a passo, no fluxo operacional recomendado):
-1. Enfileire a importação (validação de cabeçalho ocorre de forma síncrona):
-   - `make import FILE='/caminho/arquivo.csv'`
-2. Inicie o worker da fila para processar os jobs:
-   - `make queue-work-imports`
-3. Consulte o status da execução com o `run_id` retornado no passo 1:
-   - `make import-status RUN_ID='1'`
-4. Opcional: consulte o status do último run sem informar ID:
-   - `make import-status-latest`
-
-##### Equivalentes via Artisan:
-
-- `php artisan operations:import /caminho/arquivo.csv`
-- `php artisan queue:work --queue=imports,default --tries=3 --timeout=120`
-- `php artisan operations:import:status 1`
-- `php artisan operations:import:status-latest`
-
-##### Equivalente one-shot via Artisan:
+Fluxo recomendado (worker dedicado):
 
 ```bash
-php artisan operations:import /caminho/arquivo.csv
-php artisan queue:work --queue=imports,default --tries=3 --timeout=120 --stop-when-empty
-php artisan operations:import:status-latest
+make queue-worker-start
+make import FILE='/caminho/arquivo.csv' REQUESTED_BY_USER_ID='1'
+make import-status-latest
 ```
+
+Fluxo one-shot (execução única/manual):
+
+```bash
+make import-run FILE='/caminho/arquivo.csv' REQUESTED_BY_USER_ID='1'
+```
+
+> Se `requested-by-user-id` for informado, o usuário solicitante recebe notificação no canal `database` ao término da importação.
+
+---
+
+## 🔄 Gerenciamento de Fila
+
+O processamento contínuo da fila `imports` é feito pelo serviço `imports-worker` no `docker-compose`.
+
+Comandos operacionais:
+
+```bash
+make queue-worker-start
+make queue-monitor
+make queue-worker-status
+make queue-worker-stop
+```
+
+> O `imports-worker` aguarda o `mysql` ficar saudável antes de iniciar.
+
+Detalhes operacionais e troubleshooting em [Gerenciamento de Fila](docs/queue-management.md).
 
 ---
 

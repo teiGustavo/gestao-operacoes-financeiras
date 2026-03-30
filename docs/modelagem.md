@@ -286,7 +286,7 @@ difícil de implementar).
 - `UNIQUE KEY idx_users_email (email)`
 - `UNIQUE KEY idx_users_username (username)`
 
-### 7. JobBatches (Lotes de Jobs)
+### 7. OperationImportRuns (Execuções de Importação de Operações)
 
 **Colunas:**
 - `id`: PK, BigInt, Auto Increment
@@ -306,11 +306,63 @@ difícil de implementar).
 - `updated_at`: Timestamp, Default=CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 
 **Índices:**
-- `KEY idx_job_batches_status (status)`
-- `KEY idx_job_batches_requested_by_user_id (requested_by_user_id)`
+- `KEY idx_operation_import_runs_status (status)`
+- `KEY idx_operation_import_runs_requested_by_user_id (requested_by_user_id)`
 
 **Foreign Keys:**
-- `CONSTRAINT fk_job_batches_requested_by_user_id FOREIGN KEY (requested_by_user_id) REFERENCES users(id) ON DELETE SET NULL`
+- `CONSTRAINT fk_operation_import_runs_requested_by_user_id FOREIGN KEY (requested_by_user_id) REFERENCES users(id) ON DELETE SET NULL`
+
+### 8. Notifications (Notificações)
+
+**Colunas:**
+- `id`: PK, UUID
+- `type`: Varchar(255), NOT NULL
+- `notifiable_type`: Varchar(255), NOT NULL
+- `notifiable_id`: BigInt Unsigned, NOT NULL
+- `data`: Text, NOT NULL
+- `read_at`: Timestamp, Nullable
+- `created_at`: Timestamp, Default=CURRENT_TIMESTAMP
+- `updated_at`: Timestamp, Default=CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+
+**Índices:**
+- `KEY idx_notifications_notifiable (notifiable_type, notifiable_id)` ← Índice composto (gerado por `morphs`)
+
+### 9. OperationImportRunErrors (Erros por Linha da Importação)
+
+**Colunas:**
+- `id`: PK, BigInt, Auto Increment
+- `operation_import_run_id`: FK, BigInt, NOT NULL
+- `line_number`: Unsigned Int, Nullable
+- `message`: Text, NOT NULL
+- `row_payload`: JSON, Nullable
+- `created_at`: Timestamp, Default=CURRENT_TIMESTAMP
+- `updated_at`: Timestamp, Default=CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+
+**Índices:**
+- `KEY idx_oire_run_line (operation_import_run_id, line_number)` ← Índice composto
+
+**Foreign Keys:**
+- `CONSTRAINT fk_operation_import_run_errors_run_id FOREIGN KEY (operation_import_run_id) REFERENCES operation_import_runs(id) ON DELETE CASCADE`
+
+### 10. OperationImportStagingRows (Linhas Auxiliares de Staging da Importação)
+
+**Colunas:**
+- `id`: PK, BigInt, Auto Increment
+- `operation_import_run_id`: FK, BigInt, NOT NULL
+- `line_number`: Unsigned Int, NOT NULL
+- `row_payload`: JSON, NOT NULL
+- `status`: Varchar(255), NOT NULL
+- `error_message`: Text, Nullable
+- `processed_at`: Timestamp, Nullable
+- `created_at`: Timestamp, Default=CURRENT_TIMESTAMP
+- `updated_at`: Timestamp, Default=CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+
+**Índices:**
+- `KEY idx_oisr_run_line (status)`
+- `UNIQUE KEY unique_operation_import_staging_rows_run_line (operation_import_run_id, line_number)`
+
+**Foreign Keys:**
+- `CONSTRAINT fk_operation_import_staging_rows_run_id FOREIGN KEY (operation_import_run_id) REFERENCES operation_import_runs(id) ON DELETE CASCADE`
 
 ---
 
@@ -332,6 +384,8 @@ Os índices compostos foram estrategicamente projetados para:
 - **`installments` → `users`**: `ON DELETE SET NULL` → Histórico de pagamento persiste mesmo se usuário for removido
 - **`status_histories` → `operations`**: `ON DELETE CASCADE` → Histórico é deletado com a operação
 - **`status_histories` → `users`**: `ON DELETE RESTRICT` → Impede exclusão de usuários com histórico de alterações (auditoria)
+- **`operation_import_run_errors` → `operation_import_runs`**: `ON DELETE CASCADE` → Erros detalhados são removidos junto com a execução de importação
+- **`operation_import_staging_rows` → `operation_import_runs`**: `ON DELETE CASCADE` → Linhas auxiliares de staging são removidas junto com a execução
 
 > Casos como a deleção de um cliente ou conveniada com operações ativas, 
   ou a deleção de um usuário com histórico de alterações,
@@ -409,3 +463,7 @@ Para consultar a definição de cada `product_type`: [RF05: Análise de Operaç�
 - Um `histórico de status` pertence a uma `operação` → `(N:1)`
 - Um `histórico de status` é associado a um usuário que realizou a alteração → `(N:1)`
 - Um `usuário` pode realizar várias alterações no `histórico de status` → `(1:N)`
+- Uma `execução de importação` pode ter vários `erros por linha` → `(1:N)`
+- Um `erro por linha` pertence a uma `execução de importação` → `(N:1)`
+- Uma `execução de importação` pode ter várias `linhas de staging` → `(1:N)`
+- Uma `linha de staging` pertence a uma `execução de importação` → `(N:1)`

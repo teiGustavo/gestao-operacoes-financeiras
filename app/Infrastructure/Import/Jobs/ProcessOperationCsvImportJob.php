@@ -6,6 +6,7 @@ namespace App\Infrastructure\Import\Jobs;
 
 use App\Infrastructure\Import\OperationCsvImporter;
 use App\Models\OperationImportRun;
+use App\Notifications\OperationImportFinishedNotification;
 use Illuminate\Contracts\Queue\ShouldBeUnique;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
@@ -52,7 +53,10 @@ final class ProcessOperationCsvImportJob implements ShouldBeUnique, ShouldQueue
         $operationImportRun = OperationImportRun::query()->findOrFail($this->operationImportRunId);
 
         try {
-            $summary = $operationCsvImporter->importWithSummary($operationImportRun->file_path);
+            $summary = $operationCsvImporter->importWithSummary(
+                filePath: $operationImportRun->file_path,
+                operationImportRunId: $operationImportRun->id,
+            );
 
             $operationImportRun->forceFill([
                 'status' => $summary['rejected_rows'] > 0
@@ -65,12 +69,16 @@ final class ProcessOperationCsvImportJob implements ShouldBeUnique, ShouldQueue
                 'metrics' => $summary['metrics'],
                 'finished_at' => now(),
             ])->save();
+
+            $this->notifyRequestedByUser($operationImportRun);
         } catch (Throwable $throwable) {
             $operationImportRun->forceFill([
                 'status' => OperationImportRun::STATUS_FAILED,
                 'failure_message' => $throwable->getMessage(),
                 'finished_at' => now(),
             ])->save();
+
+            $this->notifyRequestedByUser($operationImportRun);
 
             throw $throwable;
         }
@@ -89,10 +97,26 @@ final class ProcessOperationCsvImportJob implements ShouldBeUnique, ShouldQueue
             return;
         }
 
+        if (
+            $operationImportRun->status === OperationImportRun::STATUS_FAILED
+            && $operationImportRun->finished_at !== null
+        ) {
+            return;
+        }
+
         $operationImportRun->forceFill([
             'status' => OperationImportRun::STATUS_FAILED,
             'failure_message' => $throwable?->getMessage(),
             'finished_at' => now(),
         ])->save();
+
+        $this->notifyRequestedByUser($operationImportRun);
+    }
+
+    private function notifyRequestedByUser(OperationImportRun $operationImportRun): void
+    {
+        $operationImportRun->requestedByUser?->notify(
+            new OperationImportFinishedNotification($operationImportRun),
+        );
     }
 }

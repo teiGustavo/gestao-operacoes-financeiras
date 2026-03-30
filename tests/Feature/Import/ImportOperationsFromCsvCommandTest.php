@@ -8,6 +8,9 @@ use App\Models\Client;
 use App\Models\Installment;
 use App\Models\Operation;
 use App\Models\OperationImportRun;
+use App\Models\OperationImportRunError;
+use App\Models\OperationImportStagingRow;
+use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Queue;
 
@@ -56,6 +59,58 @@ it('queues a csv import run after validating the header', function () {
     expect($run->status)->toBe(OperationImportRun::STATUS_PENDING)
         ->and($run->queued_at)->not->toBeNull()
         ->and($run->file_path)->toBe($csvPath);
+});
+
+it('stores requested user id when queuing a csv import run', function () {
+    Queue::fake();
+
+    $user = User::factory()->create();
+    $csvPath = createImportCsv([
+        baseImportRow(),
+    ]);
+
+    $this->artisan('operations:import', [
+        'file' => $csvPath,
+        '--requested-by-user-id' => (string) $user->id,
+    ])->assertSuccessful();
+
+    $run = OperationImportRun::query()->sole();
+
+    expect($run->requested_by_user_id)->toBe($user->id);
+});
+
+it('fails when requested user id is invalid', function () {
+    Queue::fake();
+
+    $csvPath = createImportCsv([
+        baseImportRow(),
+    ]);
+
+    $this->artisan('operations:import', [
+        'file' => $csvPath,
+        '--requested-by-user-id' => 'abc',
+    ])
+        ->assertFailed()
+        ->expectsOutputToContain('requested-by-user-id invalido');
+
+    Queue::assertNothingPushed();
+});
+
+it('fails when requested user does not exist', function () {
+    Queue::fake();
+
+    $csvPath = createImportCsv([
+        baseImportRow(),
+    ]);
+
+    $this->artisan('operations:import', [
+        'file' => $csvPath,
+        '--requested-by-user-id' => '999999',
+    ])
+        ->assertFailed()
+        ->expectsOutputToContain('usuario solicitante 999999 nao encontrado');
+
+    Queue::assertNothingPushed();
 });
 
 it('fails synchronously when header is invalid and does not enqueue run', function () {
@@ -127,6 +182,22 @@ it('keeps importing when non-header row errors happen and records a summary in r
         ->and($run->error_summary)->not->toBe([])
         ->and(array_key_first($run->error_summary))->toContain('produto: Mapeamento invalido')
         ->and(Operation::query()->count())->toBe(1);
+
+    $runErrors = OperationImportRunError::query()
+        ->where('operation_import_run_id', $run->id)
+        ->get();
+
+    $stagingRows = OperationImportStagingRow::query()
+        ->where('operation_import_run_id', $run->id)
+        ->orderBy('line_number')
+        ->get();
+
+    expect($runErrors)->toHaveCount(1)
+        ->and($runErrors->first()?->line_number)->toBe(3)
+        ->and($runErrors->first()?->message)->toContain('produto: Mapeamento invalido')
+        ->and($stagingRows)->toHaveCount(2)
+        ->and($stagingRows[0]->status)->toBe(OperationImportStagingRow::STATUS_PERSISTED)
+        ->and($stagingRows[1]->status)->toBe(OperationImportStagingRow::STATUS_REJECTED);
 });
 
 it('captures malformed csv structure as rejected rows summary in run', function () {
@@ -155,6 +226,20 @@ it('captures malformed csv structure as rejected rows summary in run', function 
         ->and($run->imported_rows)->toBe(1)
         ->and($run->rejected_rows)->toBe(1)
         ->and(array_key_first($run->error_summary))->toContain('formato csv invalido');
+
+    $runErrors = OperationImportRunError::query()
+        ->where('operation_import_run_id', $run->id)
+        ->get();
+
+    $stagingRows = OperationImportStagingRow::query()
+        ->where('operation_import_run_id', $run->id)
+        ->get();
+
+    expect($runErrors)->toHaveCount(1)
+        ->and($runErrors->first()?->line_number)->toBeNull()
+        ->and($runErrors->first()?->message)->toContain('formato csv invalido')
+        ->and($stagingRows)->toHaveCount(1)
+        ->and($stagingRows->first()?->status)->toBe(OperationImportStagingRow::STATUS_PERSISTED);
 
     @unlink($csvPath);
 });

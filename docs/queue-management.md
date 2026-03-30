@@ -14,16 +14,17 @@ Sim, é necessário para o fluxo assíncrono ficar estável no ambiente local:
 
 - o container `app` roda `php artisan serve` e não deve acumular outro processo de longa duração;
 - o worker precisa reiniciar automaticamente em caso de falha (`restart: unless-stopped`);
-- separar `app` e `imports-worker` facilita logs, operação e troubleshooting.
+- separar `app` e `imports-worker` facilita logs, operação e troubleshooting;
+- o serviço `imports-worker` pode ser escalado via `Makefile` com `IMPORT_WORKERS`.
 
 ## Comandos e responsabilidades
 
 | Comando                           | O que faz                                         |
 |-----------------------------------|---------------------------------------------------|
-| `make queue-worker-start`         | Sobe `mysql` e `imports-worker` em background     |
-| `make queue-worker-stop`          | Para o container `imports-worker`                 |
-| `make queue-worker-status`        | Exibe status do container `imports-worker`        |
-| `make queue-monitor`              | Mostra logs em tempo real do `imports-worker`     |
+| `make queue-worker-start`         | Sobe `mysql` e escala `imports-worker` (padrão `IMPORT_WORKERS=4`) |
+| `make queue-worker-stop`          | Para os containers do serviço `imports-worker`    |
+| `make queue-worker-status`        | Exibe status dos containers do serviço `imports-worker` |
+| `make queue-monitor`              | Mostra logs em tempo real do serviço `imports-worker` |
 | `make queue-work-imports`         | Processa a fila no `app` (modo manual/bloqueante) |
 | `make artisan CMD='queue:failed'` | Lista jobs falhados                               |
 | `make report-status-latest`       | Exibe status da exportação de relatório mais recente |
@@ -31,10 +32,13 @@ Sim, é necessário para o fluxo assíncrono ficar estável no ambiente local:
 
 ```bash
 make queue-worker-start
+make queue-worker-start IMPORT_WORKERS=8
 make queue-monitor
 make queue-worker-status
 make queue-worker-stop
 ```
+
+> Exemplo de comando gerado pelo `Makefile`: `docker compose up -d mysql imports-worker --scale imports-worker=8`.
 
 ## Fluxo recomendado (contínuo)
 
@@ -44,6 +48,12 @@ make queue-worker-stop
 make queue-worker-start
 make import FILE='/caminho/arquivo.csv' REQUESTED_BY_USER_ID='1'
 make import-status-latest
+```
+
+Para ajustar a concorrência dos workers em importações grandes:
+
+```bash
+make queue-worker-start IMPORT_WORKERS=8
 ```
 
 ### Exportação CSV de relatório

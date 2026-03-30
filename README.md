@@ -109,10 +109,10 @@ Um arquivo `Makefile` foi criado para facilitar a configuração do ambiente.
 - `make report-status RUN_ID='1'`: Exibe status de uma execução de relatório
 - `make report-status-latest`: Exibe status da execução de relatório mais recente
 - `make queue-work-imports`: Processa a fila `imports` no container `app` (manual/bloqueante)
-- `make queue-worker-start`: Sobe `mysql` e o serviço dedicado `imports-worker`
-- `make queue-worker-stop`: Para o serviço `imports-worker`
-- `make queue-worker-status`: Mostra status do container `imports-worker`
-- `make queue-monitor`: Mostra logs em tempo real do `imports-worker`
+- `make queue-worker-start`: Sobe `mysql` e escala o serviço `imports-worker` (padrão: `IMPORT_WORKERS=4`)
+- `make queue-worker-stop`: Para os containers do serviço `imports-worker`
+- `make queue-worker-status`: Mostra status dos containers do serviço `imports-worker`
+- `make queue-monitor`: Mostra logs em tempo real do serviço `imports-worker`
 
 > Para mais detalhes, consulte o arquivo [Makefile](./Makefile) no repositório.
 
@@ -132,6 +132,12 @@ Fluxo recomendado (worker dedicado):
 make queue-worker-start
 make import FILE='/caminho/arquivo.csv' REQUESTED_BY_USER_ID='1'
 make import-status-latest
+```
+
+Para aumentar/reduzir concorrência dos workers:
+
+```bash
+make queue-worker-start IMPORT_WORKERS=8
 ```
 
 Fluxo one-shot (execução única/manual):
@@ -163,11 +169,13 @@ make report-status RUN_ID='12'
 ## 🔄 Gerenciamento de Fila
 
 O processamento contínuo da fila `imports` é feito pelo serviço `imports-worker` no `docker-compose`.
+O número de réplicas desse serviço é controlado via `IMPORT_WORKERS` no `Makefile` (padrão: `4`).
 
 Comandos operacionais:
 
 ```bash
 make queue-worker-start
+make queue-worker-start IMPORT_WORKERS=8
 make queue-monitor
 make queue-worker-status
 make queue-worker-stop

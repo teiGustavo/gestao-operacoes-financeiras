@@ -51,14 +51,6 @@ services:
   imports-worker:
     <<: *imports-worker-base
 
-  imports-worker-2:
-    <<: *imports-worker-base
-
-  imports-worker-3:
-    <<: *imports-worker-base
-
-  imports-worker-4:
-    <<: *imports-worker-base
 
   mysql:
     image: mysql:8.4

@@ -16,7 +16,7 @@
     </head>
     <body class="min-h-screen bg-slate-100 text-slate-900 antialiased">
         <header class="border-b border-slate-200 bg-white">
-            <div class="mx-auto flex w-full max-w-6xl items-center justify-between px-6 py-3">
+            <div class="mx-auto flex w-full items-center justify-between px-12 py-4">
                 <a href="{{ route('operations.index') }}" class="text-sm font-semibold text-slate-900">
                     Gestao de Operacoes
                 </a>

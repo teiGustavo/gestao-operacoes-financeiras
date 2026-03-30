@@ -3,7 +3,7 @@
 @section('page_title', 'Esteira de Operacoes')
 
 @section('content')
-    <main class="mx-auto w-full max-w-6xl px-6 py-10">
+    <main class="mx-auto w-full px-6 py-10">
         <section class="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
             <div class="mb-6 flex items-center justify-between gap-4">
                 <div>
@@ -12,6 +12,15 @@
                 </div>
 
                 <div class="flex items-center gap-2">
+                    <button
+                        type="button"
+                        id="refresh-runs-button"
+                        data-refresh-url="{{ route('operations.runs.status') }}"
+                        class="inline-flex items-center rounded-md border border-sky-300 px-3 py-2 text-sm font-medium text-sky-700 transition hover:bg-sky-50"
+                    >
+                        Atualizar status
+                    </button>
+
                     <form action="{{ route('operations.import.csv') }}" method="POST" enctype="multipart/form-data" class="flex items-center gap-2">
                         @csrf
                         <input
@@ -125,7 +134,7 @@
                 @if ($recentImportRuns === [])
                     <p class="mt-3 text-sm text-slate-600">Nenhuma importacao solicitada ainda.</p>
                 @else
-                    <div class="mt-3 overflow-x-auto">
+                    <div class="mt-3 overflow-x-auto" id="recent-import-runs-table-wrapper">
                         <table class="min-w-full divide-y divide-slate-200 text-xs">
                             <thead class="bg-slate-50">
                                 <tr>
@@ -138,7 +147,7 @@
                                     <th class="px-3 py-2 text-left font-medium text-slate-700">Motivo da falha</th>
                                 </tr>
                             </thead>
-                            <tbody class="divide-y divide-slate-100">
+                            <tbody class="divide-y divide-slate-100" id="recent-import-runs-body">
                                 @foreach ($recentImportRuns as $importRun)
                                     <tr>
                                         <td class="px-3 py-2">#{{ $importRun['id'] }}</td>
@@ -163,7 +172,7 @@
                 @if ($recentReportRuns === [])
                     <p class="mt-3 text-sm text-slate-600">Nenhum relatorio solicitado ainda.</p>
                 @else
-                    <div class="mt-3 overflow-x-auto">
+                    <div class="mt-3 overflow-x-auto" id="recent-report-runs-table-wrapper">
                         <table class="min-w-full divide-y divide-slate-200 text-xs">
                             <thead class="bg-slate-50">
                                 <tr>
@@ -175,7 +184,7 @@
                                     <th class="px-3 py-2 text-left font-medium text-slate-700">Acao</th>
                                 </tr>
                             </thead>
-                            <tbody class="divide-y divide-slate-100">
+                            <tbody class="divide-y divide-slate-100" id="recent-report-runs-body">
                                 @foreach ($recentReportRuns as $reportRun)
                                     <tr>
                                         <td class="px-3 py-2">#{{ $reportRun['id'] }}</td>
@@ -304,5 +313,98 @@
             @endif
         </section>
     </main>
+
+    <script>
+        (() => {
+            const refreshButton = document.getElementById('refresh-runs-button');
+
+            if (!refreshButton) {
+                return;
+            }
+
+            const refreshUrl = refreshButton.dataset.refreshUrl;
+            const importRunsBody = document.getElementById('recent-import-runs-body');
+            const reportRunsBody = document.getElementById('recent-report-runs-body');
+
+            if (!refreshUrl || !importRunsBody || !reportRunsBody) {
+                return;
+            }
+
+            const escapeHtml = (value) => {
+                return String(value)
+                    .replaceAll('&', '&amp;')
+                    .replaceAll('<', '&lt;')
+                    .replaceAll('>', '&gt;')
+                    .replaceAll('"', '&quot;')
+                    .replaceAll("'", '&#039;');
+            };
+
+            const reportRowHtml = (reportRun) => {
+                const failureReason = reportRun.status === 'failed'
+                    ? escapeHtml(reportRun.failure_message ?? 'Falha sem detalhe')
+                    : '-';
+
+                const actionHtml = reportRun.download_url
+                    ? `<a href="${escapeHtml(reportRun.download_url)}" class="inline-flex items-center rounded-md border border-emerald-300 px-2 py-1 font-medium text-emerald-700 hover:bg-emerald-50">Baixar CSV</a>`
+                    : '<span class="text-slate-500">Aguardando</span>';
+
+                return `
+                    <tr>
+                        <td class="px-3 py-2">#${escapeHtml(reportRun.id)}</td>
+                        <td class="px-3 py-2">${escapeHtml(reportRun.status_label)}</td>
+                        <td class="px-3 py-2">${escapeHtml(reportRun.total_rows)}</td>
+                        <td class="px-3 py-2">${escapeHtml(reportRun.finished_at ?? '-')}</td>
+                        <td class="px-3 py-2">${failureReason}</td>
+                        <td class="px-3 py-2">${actionHtml}</td>
+                    </tr>
+                `;
+            };
+
+            const importRowHtml = (importRun) => {
+                return `
+                    <tr>
+                        <td class="px-3 py-2">#${escapeHtml(importRun.id)}</td>
+                        <td class="px-3 py-2">${escapeHtml(importRun.status_label)}</td>
+                        <td class="px-3 py-2">${escapeHtml(importRun.total_rows)}</td>
+                        <td class="px-3 py-2">${escapeHtml(importRun.imported_rows)}</td>
+                        <td class="px-3 py-2">${escapeHtml(importRun.rejected_rows)}</td>
+                        <td class="px-3 py-2">${escapeHtml(importRun.finished_at ?? '-')}</td>
+                        <td class="px-3 py-2">${escapeHtml(importRun.failure_message ?? '-')}</td>
+                    </tr>
+                `;
+            };
+
+            refreshButton.addEventListener('click', async () => {
+                refreshButton.disabled = true;
+
+                try {
+                    const response = await fetch(refreshUrl, {
+                        method: 'GET',
+                        headers: {
+                            'Accept': 'application/json',
+                            'X-Requested-With': 'XMLHttpRequest',
+                        },
+                    });
+
+                    if (!response.ok) {
+                        console.error('Falha ao atualizar paineis');
+
+                        return;
+                    }
+
+                    const payload = await response.json();
+                    const recentImportRuns = payload?.data?.recent_import_runs ?? [];
+                    const recentReportRuns = payload?.data?.recent_report_runs ?? [];
+
+                    importRunsBody.innerHTML = recentImportRuns.map(importRowHtml).join('');
+                    reportRunsBody.innerHTML = recentReportRuns.map(reportRowHtml).join('');
+                } catch (error) {
+                    console.error(error);
+                } finally {
+                    refreshButton.disabled = false;
+                }
+            });
+        })();
+    </script>
 @endsection
 

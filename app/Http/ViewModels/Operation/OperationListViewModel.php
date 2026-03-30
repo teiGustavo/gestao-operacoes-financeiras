@@ -98,32 +98,48 @@ final class OperationListViewModel
                 ->orderBy('name')
                 ->pluck('name', 'id')
                 ->all(),
-            'recentImportRuns' => $importRuns?->map(function (OperationImportRun $operationImportRun): array {
-                return [
-                    'id' => $operationImportRun->id,
-                    'status' => $operationImportRun->status,
-                    'status_label' => $this->importStatusLabel((string) $operationImportRun->status),
-                    'total_rows' => (int) $operationImportRun->total_rows,
-                    'imported_rows' => (int) $operationImportRun->imported_rows,
-                    'rejected_rows' => (int) $operationImportRun->rejected_rows,
-                    'finished_at' => $operationImportRun->finished_at?->format('d/m/Y H:i:s'),
-                    'failure_message' => $operationImportRun->failure_message,
-                ];
-            })->values()->all() ?? [],
-            'recentReportRuns' => $reportRuns?->map(function (OperationReportRun $operationReportRun): array {
-                return [
-                    'id' => $operationReportRun->id,
-                    'status' => $operationReportRun->status,
-                    'status_label' => $this->statusLabel((string) $operationReportRun->status),
-                    'total_rows' => (int) $operationReportRun->total_rows,
-                    'finished_at' => $operationReportRun->finished_at?->format('d/m/Y H:i:s'),
-                    'download_url' => $operationReportRun->status === OperationReportRun::STATUS_COMPLETED
-                        ? route('operations.report.csv.download', ['operationReportRun' => $operationReportRun->id])
-                        : null,
-                    'failure_message' => $operationReportRun->failure_message,
-                ];
-            })->values()->all() ?? [],
+            'recentImportRuns' => $this->formatRecentImportRuns($importRuns),
+            'recentReportRuns' => $this->formatRecentReportRuns($reportRuns),
         ];
+    }
+
+    /**
+     * @return list<array{id:int,status:string,status_label:string,total_rows:int,imported_rows:int,rejected_rows:int,finished_at:string|null,failure_message:string|null}>
+     */
+    public function formatRecentImportRuns(?Collection $importRuns): array
+    {
+        return $importRuns?->map(function (OperationImportRun $operationImportRun): array {
+            return [
+                'id' => $operationImportRun->id,
+                'status' => $operationImportRun->status,
+                'status_label' => $this->importStatusLabel((string) $operationImportRun->status),
+                'total_rows' => (int) $operationImportRun->total_rows,
+                'imported_rows' => (int) $operationImportRun->imported_rows,
+                'rejected_rows' => (int) $operationImportRun->rejected_rows,
+                'finished_at' => $operationImportRun->finished_at?->format('d/m/Y H:i:s'),
+                'failure_message' => $operationImportRun->failure_message,
+            ];
+        })->values()->all() ?? [];
+    }
+
+    /**
+     * @return list<array{id:int,status:string,status_label:string,total_rows:int,finished_at:string|null,download_url:string|null,failure_message:string|null}>
+     */
+    public function formatRecentReportRuns(?Collection $reportRuns): array
+    {
+        return $reportRuns?->map(function (OperationReportRun $operationReportRun): array {
+            return [
+                'id' => $operationReportRun->id,
+                'status' => $operationReportRun->status,
+                'status_label' => $this->statusLabel((string) $operationReportRun->status),
+                'total_rows' => (int) $operationReportRun->total_rows,
+                'finished_at' => $operationReportRun->finished_at?->format('d/m/Y H:i:s'),
+                'download_url' => $operationReportRun->status === OperationReportRun::STATUS_COMPLETED
+                    ? route('operations.report.csv.download', ['operationReportRun' => $operationReportRun->id])
+                    : null,
+                'failure_message' => $operationReportRun->failure_message,
+            ];
+        })->values()->all() ?? [];
     }
 
     private function statusLabel(string $status): string

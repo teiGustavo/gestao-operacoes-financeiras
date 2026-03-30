@@ -17,6 +17,47 @@ uses(RefreshDatabase::class);
 
 it('redirects guests from operations index', function () {
     $this->get('/operations')->assertRedirect('/login');
+
+    $this->get('/operations/runs-status')->assertRedirect('/login');
+});
+
+it('returns recent import and report runs payload for panel refresh endpoint', function () {
+    $user = User::factory()->create();
+
+    OperationImportRun::query()->create([
+        'file_path' => storage_path('app/private/imports/a.csv'),
+        'status' => OperationImportRun::STATUS_COMPLETED,
+        'requested_by_user_id' => $user->id,
+        'queued_at' => now()->subMinute(),
+        'started_at' => now()->subSeconds(50),
+        'finished_at' => now(),
+        'total_rows' => 10,
+        'imported_rows' => 9,
+        'rejected_rows' => 1,
+    ]);
+
+    $reportRun = OperationReportRun::query()->create([
+        'status' => OperationReportRun::STATUS_COMPLETED,
+        'requested_by_user_id' => $user->id,
+        'filters' => ['status' => OperationStatus::APPROVED->value],
+        'reference_date' => '2026-06-30',
+        'queued_at' => now()->subMinute(),
+        'started_at' => now()->subSeconds(50),
+        'finished_at' => now(),
+        'total_rows' => 1,
+        'output_file_path' => 'reports/operations-report-run-1.csv',
+    ]);
+
+    $this->actingAs($user)
+        ->getJson(route('operations.runs.status'))
+        ->assertSuccessful()
+        ->assertJsonPath('data.recent_import_runs.0.status', OperationImportRun::STATUS_COMPLETED)
+        ->assertJsonPath('data.recent_import_runs.0.imported_rows', 9)
+        ->assertJsonPath('data.recent_report_runs.0.status', OperationReportRun::STATUS_COMPLETED)
+        ->assertJsonPath(
+            'data.recent_report_runs.0.download_url',
+            route('operations.report.csv.download', ['operationReportRun' => $reportRun->id]),
+        );
 });
 
 it('lists operations for authenticated users', function () {

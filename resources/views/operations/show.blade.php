@@ -3,7 +3,7 @@
 @section('page_title', $page['title'])
 
 @section('content')
-    <main class="mx-auto w-full max-w-5xl px-6 py-10">
+    <main class="mx-auto w-full px-6 py-10">
         <section class="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
             <div class="mb-6 flex items-center justify-between gap-4">
                 <div>

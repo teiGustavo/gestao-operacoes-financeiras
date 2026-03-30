@@ -405,6 +405,7 @@ difícil de implementar).
 - `CONSTRAINT fk_operation_import_run_chunks_run_id FOREIGN KEY (operation_import_run_id) REFERENCES operation_import_runs(id) ON DELETE CASCADE`
 
 > O campo `start_byte_offset` permite leitura otimizada por chunk (seek direto no início do trecho), reduzindo releitura de arquivo em workers tardios.
+> O tamanho do chunk não é fixo: ele é calculado automaticamente por execução com base em `IMPORT_WORKERS`.
 
 ### 12. OperationReportRuns (Execuções de Exportação de Relatórios)
 

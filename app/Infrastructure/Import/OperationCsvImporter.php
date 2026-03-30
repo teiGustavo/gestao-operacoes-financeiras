@@ -224,10 +224,10 @@ class OperationCsvImporter
     /**
      * @return array{total_rows:int,chunks:list<array{chunk_index:int,start_line_number:int,end_line_number:int,start_byte_offset:int}>}
      */
-    public function buildChunkPlan(string $filePath, int $chunkSize): array
+    public function buildChunkPlan(string $filePath, int $workerCount): array
     {
-        if ($chunkSize <= 0) {
-            throw new InvalidArgumentException('chunk_size invalido');
+        if ($workerCount <= 0) {
+            throw new InvalidArgumentException('worker_count invalido');
         }
 
         if (! is_file($filePath) || ! is_readable($filePath)) {
@@ -249,12 +249,7 @@ class OperationCsvImporter
         }
 
         $lineNumber = 1;
-        $totalRows = 0;
-        $rowsInChunk = 0;
-        $chunkIndex = 1;
-        $chunkStartLineNumber = null;
-        $chunkStartByteOffset = null;
-        $chunks = [];
+        $rows = [];
 
         while (true) {
             $rowByteOffset = ftell($handle);
@@ -277,39 +272,41 @@ class OperationCsvImporter
                 continue;
             }
 
-            if ($rowsInChunk === 0) {
-                $chunkStartLineNumber = $lineNumber;
-                $chunkStartByteOffset = $rowByteOffset;
-            }
-
-            $rowsInChunk++;
-            $totalRows++;
-
-            if ($rowsInChunk >= $chunkSize) {
-                $chunks[] = [
-                    'chunk_index' => $chunkIndex,
-                    'start_line_number' => $chunkStartLineNumber,
-                    'end_line_number' => $lineNumber,
-                    'start_byte_offset' => $chunkStartByteOffset,
-                ];
-
-                $chunkIndex++;
-                $rowsInChunk = 0;
-                $chunkStartLineNumber = null;
-                $chunkStartByteOffset = null;
-            }
-        }
-
-        if ($rowsInChunk > 0 && $chunkStartLineNumber !== null && $chunkStartByteOffset !== null) {
-            $chunks[] = [
-                'chunk_index' => $chunkIndex,
-                'start_line_number' => $chunkStartLineNumber,
-                'end_line_number' => $lineNumber,
-                'start_byte_offset' => $chunkStartByteOffset,
+            $rows[] = [
+                'line_number' => $lineNumber,
+                'byte_offset' => $rowByteOffset,
             ];
         }
 
         fclose($handle);
+
+        $totalRows = count($rows);
+
+        if ($totalRows === 0) {
+            return [
+                'total_rows' => 0,
+                'chunks' => [],
+            ];
+        }
+
+        $chunkSize = (int) ceil($totalRows / $workerCount);
+        $chunks = [];
+        $chunkIndex = 1;
+
+        for ($startIndex = 0; $startIndex < $totalRows; $startIndex += $chunkSize) {
+            $endIndex = min($startIndex + $chunkSize - 1, $totalRows - 1);
+            $startRow = $rows[$startIndex];
+            $endRow = $rows[$endIndex];
+
+            $chunks[] = [
+                'chunk_index' => $chunkIndex,
+                'start_line_number' => $startRow['line_number'],
+                'end_line_number' => $endRow['line_number'],
+                'start_byte_offset' => $startRow['byte_offset'],
+            ];
+
+            $chunkIndex++;
+        }
 
         return [
             'total_rows' => $totalRows,

@@ -128,7 +128,8 @@ Um arquivo `Makefile` foi criado para facilitar a configuração do ambiente.
 
 Resumo da implementação atual (performance):
 
-- A importação é orquestrada por execução (`operation_import_runs`) e dividida em chunks de `10.000` linhas.
+- A importação é orquestrada por execução (`operation_import_runs`) e dividida em chunks dinâmicos.
+- O tamanho de cada chunk é calculado automaticamente por execução com base em `IMPORT_WORKERS`.
 - Cada chunk é processado por um job dedicado em paralelo (`ProcessOperationCsvImportChunkJob`).
 - O orquestrador persiste `start_line_number`, `end_line_number` e `start_byte_offset` por chunk (`operation_import_run_chunks`).
 - Cada worker faz `seek` direto para o início do seu trecho no arquivo, evitando releitura completa do CSV nos chunks tardios.
@@ -147,7 +148,7 @@ Para aumentar/reduzir concorrência dos workers:
 make queue-worker-start IMPORT_WORKERS=8
 ```
 
-> Quanto maior `IMPORT_WORKERS`, maior o paralelismo efetivo dos chunks (limitado por CPU/IO/DB).
+> Quanto maior `IMPORT_WORKERS`, menor tende a ser o chunk por worker (limitado por CPU/IO/DB).
 
 Fluxo one-shot (execução única/manual):
 

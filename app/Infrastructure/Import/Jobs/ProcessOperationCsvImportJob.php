@@ -18,8 +18,6 @@ final class ProcessOperationCsvImportJob implements ShouldBeUnique, ShouldQueue
 {
     use Queueable;
 
-    private const int WORKER_LINES_CHUNK_SIZE = 10_000;
-
     public int $tries = 3;
 
     public int $timeout = 120;
@@ -62,7 +60,7 @@ final class ProcessOperationCsvImportJob implements ShouldBeUnique, ShouldQueue
 
             $chunkPlan = $operationCsvImporter->buildChunkPlan(
                 filePath: $operationImportRun->file_path,
-                chunkSize: self::WORKER_LINES_CHUNK_SIZE,
+                workerCount: $this->resolveParallelWorkers(),
             );
             $totalRows = $chunkPlan['total_rows'];
 
@@ -184,5 +182,12 @@ final class ProcessOperationCsvImportJob implements ShouldBeUnique, ShouldQueue
         $operationImportRun->requestedByUser?->notify(
             new OperationImportFinishedNotification($operationImportRun),
         );
+    }
+
+    private function resolveParallelWorkers(): int
+    {
+        $workers = (int) config('imports.parallel_workers', 4);
+
+        return max(1, $workers);
     }
 }

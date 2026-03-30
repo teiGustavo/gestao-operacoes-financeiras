@@ -266,7 +266,9 @@ it('does not reprocess a run that is already processing', function () {
         ->and(Installment::query()->count())->toBe(0);
 });
 
-it('splits large imports into workers of ten thousand data rows', function () {
+it('splits large imports according to configured available workers', function () {
+    config()->set('imports.parallel_workers', 4);
+
     $rows = [];
 
     for ($index = 0; $index < 10_001; $index++) {
@@ -292,14 +294,19 @@ it('splits large imports into workers of ten thousand data rows', function () {
         ->orderBy('chunk_index')
         ->get();
 
-    expect($chunks)->toHaveCount(2)
+    expect($chunks)->toHaveCount(4)
         ->and($chunks[0]->start_line_number)->toBe(2)
-        ->and($chunks[0]->end_line_number)->toBe(10_001)
+        ->and($chunks[0]->end_line_number)->toBe(2_502)
         ->and($chunks[0]->start_byte_offset)->toBeInt()
-        ->and($chunks[1]->start_line_number)->toBe(10_002)
-        ->and($chunks[1]->end_line_number)->toBe(10_002)
+        ->and($chunks[1]->start_line_number)->toBe(2_503)
+        ->and($chunks[1]->end_line_number)->toBe(5_003)
         ->and($chunks[1]->start_byte_offset)->toBeInt()
-        ->and($chunks[1]->start_byte_offset)->toBeGreaterThan($chunks[0]->start_byte_offset);
+        ->and($chunks[1]->start_byte_offset)->toBeGreaterThan($chunks[0]->start_byte_offset)
+        ->and($chunks[2]->start_line_number)->toBe(5_004)
+        ->and($chunks[2]->end_line_number)->toBe(7_504)
+        ->and($chunks[3]->start_line_number)->toBe(7_505)
+        ->and($chunks[3]->end_line_number)->toBe(10_002)
+        ->and($chunks[3]->start_byte_offset)->toBeGreaterThan($chunks[2]->start_byte_offset);
 });
 
 /**

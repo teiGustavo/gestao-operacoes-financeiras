@@ -110,13 +110,16 @@ de movimentações incrementais
 A importação dos dados foi implementada em fluxo assíncrono e paralelizável, mantendo
 uma separação prática equivalente ao `ETL`:
 
-- `Extract/Plan`: leitura do CSV e planejamento de chunks de `10.000` linhas.
+- `Extract/Plan`: leitura do CSV e planejamento de chunks com tamanho dinâmico por execução.
 - `Transform`: validação e normalização linha a linha por worker.
 - `Load`: persistência em lote (bulk operations + parcelas) e finalização agregada.
 
 Na prática, cada execução de importação cria registros em `operation_import_runs` e
 `operation_import_run_chunks`, com `start_line_number`, `end_line_number` e
 `start_byte_offset` por chunk.
+
+O dimensionamento do chunk considera o número de workers disponíveis (`IMPORT_WORKERS`),
+distribuindo o total de linhas entre eles para balancear throughput e latência.
 
 Com isso, cada worker processa apenas seu trecho do arquivo e pode iniciar com `seek`
 direto no byte de início do chunk, reduzindo I/O redundante em arquivos grandes.

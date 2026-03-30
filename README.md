@@ -216,6 +216,51 @@ O teste será avaliado principalmente nos seguintes aspectos:
 
 ---
 
+## 🎯 Melhorias Futuras e Limitações da Solução
+
+#### Com mais tempo, as seguintes melhorias poderiam ser implementadas:
+
+- Usar UUID ou ULID para `external_id` (tornando o id externo seguro para exposição pública)
+
+- Padronizar todos os erros em inglês e fazer internacionalização para as mensagens serem retornadas para o usuário em português
+
+- Delegar o salvamento do histórico para uma fila/job
+
+- Adicionar um "sininho" ou um toast na tela do usuário no exato momento em que o Job terminar (sem que ele precise dar F5, o que precisaria de `WebSocket`).
+
+- Separar rotas de API (que retornam JSON) das rotas que servem views (HTML), para evitar confusão e manter uma estrutura mais clara.
+
+- Separar fila exports da fila imports se para isolamento operacional.
+  
+- Melhorar exportação das tabelas de parcelas e a qualidade geral do relatório.
+
+- Traduzir campos exportados no csv.
+
+- Incluir arquivo csv com os cabeçalhos
+  esperados, disponível para download, para o usuário tratar os dados antes de submeter para a aplicação
+
+#### Limitações e "Problemas":
+
+- Os fluxos estão acoplados, onde em um cenário de escala, é mais interessante haver uma comunicação por eventos (filosofia `Event Driven`).
+
+- O histórico de jobs não é salvo para auditoria.
+ 
+- As importações não são idempotentes (se o mesmo arquivo for importado mais de uma vez, ele irá criar registros duplicados).
+
+- Somente as tabelas com entidades de domínio possuem checks ao nível de banco de dados.
+
+- Os testes não rodam em um banco separado, o que gera efeitos colaterais no banco padrão.
+
+- As dependências do frontend não estão utilizando o NPM + Vite (simplicidade).
+
+- Separação pouco delimitada entre os idiomas
+
+- A importação permite apenas csv (consulte o arquivo de embasamento técnico para mais detalhes sobre essa decisão).
+
+- Rotas que servem JSON não seguem formatação clara e estruturada de retorno
+
+---
+
 ## 📝 Licença
 
 Este projeto é parte de um processo seletivo para a vaga de 

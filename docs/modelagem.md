@@ -286,6 +286,32 @@ difícil de implementar).
 - `UNIQUE KEY idx_users_email (email)`
 - `UNIQUE KEY idx_users_username (username)`
 
+### 7. JobBatches (Lotes de Jobs)
+
+**Colunas:**
+- `id`: PK, BigInt, Auto Increment
+- `file_path`: Varchar(255), NOT NULL
+- `status`: Varchar(255), NOT NULL
+- `requested_by_user_id`: FK, BigInt, Nullable
+- `queued_at`: Timestamp, Nullable
+- `started_at`: Timestamp, Nullable
+- `finished_at`: Timestamp, Nullable
+- `total_rows`: Unsigned Int, Default=0, NOT NULL
+- `imported_rows`: Unsigned Int, Default=0, NOT NULL
+- `rejected_rows`: Unsigned Int, Default=0, NOT NULL
+- `error_summary`: JSON, Nullable
+- `metrics`: JSON, Nullable
+- `failure_message`: Text, Nullable
+- `created_at`: Timestamp, Default=CURRENT_TIMESTAMP
+- `updated_at`: Timestamp, Default=CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+
+**Índices:**
+- `KEY idx_job_batches_status (status)`
+- `KEY idx_job_batches_requested_by_user_id (requested_by_user_id)`
+
+**Foreign Keys:**
+- `CONSTRAINT fk_job_batches_requested_by_user_id FOREIGN KEY (requested_by_user_id) REFERENCES users(id) ON DELETE SET NULL`
+
 ---
 
 ## Notas Importantes

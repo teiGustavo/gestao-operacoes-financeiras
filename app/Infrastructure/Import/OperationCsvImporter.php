@@ -9,9 +9,7 @@ use App\Infrastructure\Import\Contracts\OperationImportDataExtractorInterface;
 use App\Infrastructure\Import\Contracts\OperationImportRowPersisterInterface;
 use App\Infrastructure\Import\Validators\OperationImportHeaderValidator;
 use App\Infrastructure\Import\Validators\OperationImportRowValidator;
-use Illuminate\Support\Facades\DB;
 use InvalidArgumentException;
-use Throwable;
 
 class OperationCsvImporter
 {
@@ -54,11 +52,21 @@ class OperationCsvImporter
     ) {}
 
     /**
-     * @return array{extract:float,validate_header:float,validate_rows:float,persist_rows:float,total:float,rows:int,persist_breakdown:array{upsert_clients:float,upsert_agreements:float,load_client_ids:float,insert_operations:float,insert_installments:float,total:float}}
+     * @throws InvalidArgumentException
+     */
+    public function ensureHeaderIsValid(string $filePath): void
+    {
+        $extractedData = $this->operationImportDataExtractor->extract($filePath);
+
+        $this->operationImportHeaderValidator->validate($extractedData->headers, self::EXPECTED_HEADERS);
+    }
+
+    /**
+     * @return array{total_rows:int,imported_rows:int,rejected_rows:int,error_summary:array<string,int>,metrics:array{extract:float,validate_header:float,validate_rows:float,persist_rows:float,total:float,persist_breakdown:array{upsert_clients:float,upsert_agreements:float,load_client_ids:float,insert_operations:float,insert_installments:float,total:float}}}
      *
      * @throws InvalidArgumentException | InfrastructureUnavailableException
      */
-    public function import(string $filePath): array
+    public function importWithSummary(string $filePath): array
     {
         $totalStart = microtime(true);
 
@@ -72,7 +80,10 @@ class OperationCsvImporter
 
         $rowValidationElapsed = 0.0;
         $persistElapsed = 0.0;
-        $persistedRows = 0;
+        $importedRows = 0;
+        $totalRows = 0;
+        $rejectedRows = 0;
+        $errorSummary = [];
         $persistBreakdown = [
             'upsert_clients' => 0.0,
             'upsert_agreements' => 0.0,
@@ -83,56 +94,71 @@ class OperationCsvImporter
         ];
 
         try {
-            DB::transaction(function () use (
-                $extractedData,
-                &$rowValidationElapsed,
-                &$persistElapsed,
-                &$persistedRows,
-                &$persistBreakdown,
-            ): void {
-                $validatedRowsChunk = [];
+            $validatedRowsChunk = [];
 
+            try {
                 foreach ($extractedData->rows as $extractedRow) {
-                    $rowValidationStart = microtime(true);
-                    $validatedRowsChunk[] = $this->validateAndNormalizeRow(
-                        row: $extractedRow['row'],
-                        lineNumber: $extractedRow['lineNumber'],
-                    );
-                    $rowValidationElapsed += microtime(true) - $rowValidationStart;
+                    $totalRows++;
+
+                    try {
+                        $rowValidationStart = microtime(true);
+                        $validatedRowsChunk[] = $this->validateAndNormalizeRow(
+                            row: $extractedRow['row'],
+                            lineNumber: $extractedRow['lineNumber'],
+                        );
+                        $rowValidationElapsed += microtime(true) - $rowValidationStart;
+                    } catch (InvalidArgumentException $invalidArgumentException) {
+                        $rejectedRows++;
+                        $this->appendErrorSummary($errorSummary, $invalidArgumentException->getMessage());
+
+                        continue;
+                    }
 
                     if (count($validatedRowsChunk) >= self::PERSIST_ROWS_CHUNK_SIZE) {
                         $this->persistValidatedRowsChunk(
                             validatedRowsChunk: $validatedRowsChunk,
                             persistElapsed: $persistElapsed,
-                            persistedRows: $persistedRows,
+                            persistedRows: $importedRows,
                             persistBreakdown: $persistBreakdown,
                         );
                     }
                 }
+            } catch (InvalidArgumentException $invalidArgumentException) {
+                $rejectedRows++;
+                $this->appendErrorSummary($errorSummary, $invalidArgumentException->getMessage());
+            }
 
-                $this->persistValidatedRowsChunk(
-                    validatedRowsChunk: $validatedRowsChunk,
-                    persistElapsed: $persistElapsed,
-                    persistedRows: $persistedRows,
-                    persistBreakdown: $persistBreakdown,
-                );
-            });
+            $this->persistValidatedRowsChunk(
+                validatedRowsChunk: $validatedRowsChunk,
+                persistElapsed: $persistElapsed,
+                persistedRows: $importedRows,
+                persistBreakdown: $persistBreakdown,
+            );
         } catch (InvalidArgumentException $invalidArgumentException) {
             throw $invalidArgumentException;
-        } catch (Throwable $e) {
-            throw new InfrastructureUnavailableException('Erro ao importar dados: '.$e->getMessage());
+        } catch (\Throwable $throwable) {
+            throw new InfrastructureUnavailableException('Erro ao importar dados: '.$throwable->getMessage());
         }
 
         $totalElapsed = microtime(true) - $totalStart;
 
+        if ($totalRows === 0) {
+            $totalRows = $importedRows + $rejectedRows;
+        }
+
         return [
-            'extract' => $extractElapsed,
-            'validate_header' => $headerValidationElapsed,
-            'validate_rows' => $rowValidationElapsed,
-            'persist_rows' => $persistElapsed,
-            'total' => $totalElapsed,
-            'rows' => $persistedRows,
-            'persist_breakdown' => $persistBreakdown,
+            'total_rows' => $totalRows,
+            'imported_rows' => $importedRows,
+            'rejected_rows' => $rejectedRows,
+            'error_summary' => $errorSummary,
+            'metrics' => [
+                'extract' => $extractElapsed,
+                'validate_header' => $headerValidationElapsed,
+                'validate_rows' => $rowValidationElapsed,
+                'persist_rows' => $persistElapsed,
+                'total' => $totalElapsed,
+                'persist_breakdown' => $persistBreakdown,
+            ],
         ];
     }
 
@@ -173,5 +199,13 @@ class OperationCsvImporter
         }
 
         $validatedRowsChunk = [];
+    }
+
+    /**
+     * @param  array<string,int>  $errorSummary
+     */
+    private function appendErrorSummary(array &$errorSummary, string $message): void
+    {
+        $errorSummary[$message] = ($errorSummary[$message] ?? 0) + 1;
     }
 }

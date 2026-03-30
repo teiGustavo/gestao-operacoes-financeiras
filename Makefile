@@ -3,8 +3,10 @@ COMPOSE_CMD ?= $(CONTAINER_TOOL) compose
 APP_SERVICE ?= app
 CMD ?=
 ARGS ?=
+FILE ?=
+RUN_ID ?=
 
-.PHONY: help up down restart build ps logs shell artisan migrate test pint composer
+.PHONY: help up down restart build ps logs shell artisan migrate test pint composer npm import import-run import-status import-status-latest queue-work-imports
 
 help: ## Lista os comandos disponíveis
 	@awk 'BEGIN {FS = ":.*##"; printf "Comandos:\n"} /^[a-zA-Z_-]+:.*##/ {printf "  %-12s %s\n", $$1, $$2}' $(MAKEFILE_LIST)
@@ -47,3 +49,21 @@ composer: ## Executa Composer (use CMD='require pacote')
 
 npm: ## Executa npm (use CMD='install')
 	$(COMPOSE_CMD) exec $(APP_SERVICE) npm $(CMD)
+
+import: ## Enfileira importacao CSV (use FILE='/caminho/arquivo.csv')
+	$(COMPOSE_CMD) exec $(APP_SERVICE) php artisan operations:import $(FILE)
+
+import-run: ## Enfileira CSV, processa fila ate esvaziar e exibe o ultimo status (use FILE='/caminho/arquivo.csv')
+	$(COMPOSE_CMD) exec $(APP_SERVICE) php artisan operations:import $(FILE)
+	$(COMPOSE_CMD) exec $(APP_SERVICE) php artisan queue:work --queue=imports,default --tries=3 --timeout=120 --stop-when-empty
+	$(COMPOSE_CMD) exec $(APP_SERVICE) php artisan operations:import:status-latest
+
+import-status: ## Exibe status da importacao (use RUN_ID='1')
+	$(COMPOSE_CMD) exec $(APP_SERVICE) php artisan operations:import:status $(RUN_ID)
+
+import-status-latest: ## Exibe status da importacao mais recente
+	$(COMPOSE_CMD) exec $(APP_SERVICE) php artisan operations:import:status-latest
+
+queue-work-imports: ## Processa fila de importacao (queue imports)
+	$(COMPOSE_CMD) exec $(APP_SERVICE) php artisan queue:work --queue=imports,default --tries=3 --timeout=120
+

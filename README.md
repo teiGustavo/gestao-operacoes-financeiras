@@ -72,7 +72,7 @@ A pasta `app/` contém os diretórios padrão + separação de camadas, com a mo
 
 Um arquivo `Makefile` foi criado para facilitar a configuração do ambiente. 
 
-Siga os passos abaixo:
+### Siga os passos abaixo:
 
 1. Clone o repositório
 2. Navegue até a pasta do projeto
@@ -86,23 +86,67 @@ Siga os passos abaixo:
 > Os comandos de `composer install` e `npm install` são opcionais na primeira execução, 
 pois o `Dockerfile` já se encarrega de instalar as dependências no boot.
 
-Glossário dos comandos do `Makefile`:
+### Glossário dos comandos do `Makefile`:
 
 - `make up`: Configura e sobe o ambiente Docker
 - `make down`: Para e remove os containers Docker
+- `make restart`: Reinicia os containers
+- `make build`: Rebuild da imagem da aplicação
+- `make ps`: Mostra status dos serviços
+- `make logs ARGS='-f app'`: Mostra logs dos serviços
+- `make shell`: Abre shell no container `app`
 - `make artisan CMD='...'`: Executa comandos Artisan do Laravel dentro do container
+- `make migrate`: Executa migrações
+- `make test ARGS='--filter=NomeDoTeste'`: Executa os testes com `php artisan test --compact`
+- `make pint`: Formata o código com Pint
 - `make composer CMD='...'`: Executa comandos do Composer dentro do container
 - `make npm CMD='...'`: Executa comandos do npm dentro do container
+- `make import FILE='/caminho/arquivo.csv'`: Enfileira a importação CSV assíncrona
+- `make import-run FILE='/caminho/arquivo.csv'`: Enfileira, processa a fila até esvaziar e exibe o último status
+- `make import-status RUN_ID='1'`: Exibe status de uma execução de importação
+- `make import-status-latest`: Exibe status da execução de importação mais recente
+- `make queue-work-imports`: Processa a fila de importação (`imports`)
 
 > Para mais detalhes, consulte o arquivo [Makefile](./Makefile) no repositório.
 
-Equivalência dos comandos `Makefile` para se caso o `make` não estiver disponível:
+### Equivalência dos comandos `Makefile` (caso o `make` não estiver disponível):
 
 - `make up`: `docker compose up -d`
 - `make down`: `docker compose down`
 - `make artisan CMD='...'`: `docker compose exec app php artisan ...`
 - `make composer CMD='...'`: `docker compose exec app composer ...`
 - `make npm CMD='...'`: `docker compose exec app npm ...`
+
+### Importação CSV assíncrona (fila)
+
+#### Opção rápida (one-shot):
+
+- `make import-run FILE='/caminho/arquivo.csv'`
+
+#### Opção detalhada (passo a passo, no fluxo operacional recomendado):
+1. Enfileire a importação (validação de cabeçalho ocorre de forma síncrona):
+   - `make import FILE='/caminho/arquivo.csv'`
+2. Inicie o worker da fila para processar os jobs:
+   - `make queue-work-imports`
+3. Consulte o status da execução com o `run_id` retornado no passo 1:
+   - `make import-status RUN_ID='1'`
+4. Opcional: consulte o status do último run sem informar ID:
+   - `make import-status-latest`
+
+##### Equivalentes via Artisan:
+
+- `php artisan operations:import /caminho/arquivo.csv`
+- `php artisan queue:work --queue=imports,default --tries=3 --timeout=120`
+- `php artisan operations:import:status 1`
+- `php artisan operations:import:status-latest`
+
+##### Equivalente one-shot via Artisan:
+
+```bash
+php artisan operations:import /caminho/arquivo.csv
+php artisan queue:work --queue=imports,default --tries=3 --timeout=120 --stop-when-empty
+php artisan operations:import:status-latest
+```
 
 ---
 

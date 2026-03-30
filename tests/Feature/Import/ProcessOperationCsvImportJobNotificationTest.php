@@ -2,9 +2,12 @@
 
 declare(strict_types=1);
 
+use App\Infrastructure\Import\Jobs\FinalizeOperationCsvImportRunJob;
+use App\Infrastructure\Import\Jobs\ProcessOperationCsvImportChunkJob;
 use App\Infrastructure\Import\Jobs\ProcessOperationCsvImportJob;
 use App\Infrastructure\Import\OperationCsvImporter;
 use App\Models\OperationImportRun;
+use App\Models\OperationImportRunChunk;
 use App\Models\User;
 use App\Notifications\OperationImportFinishedNotification;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -19,8 +22,7 @@ it('notifies requested user when import completes successfully', function () {
     $csvPath = createNotificationTestCsv([baseImportRowForNotificationTest()]);
     $run = createRunForNotificationTest($csvPath, $user->id);
 
-    $job = new ProcessOperationCsvImportJob($run->id);
-    $job->handle(app(OperationCsvImporter::class));
+    processNotificationImportRunPipeline($run->id);
 
     $run->refresh();
 
@@ -50,8 +52,7 @@ it('notifies requested user when import completes with row errors', function () 
     ]);
     $run = createRunForNotificationTest($csvPath, $user->id);
 
-    $job = new ProcessOperationCsvImportJob($run->id);
-    $job->handle(app(OperationCsvImporter::class));
+    processNotificationImportRunPipeline($run->id);
 
     $run->refresh();
 
@@ -102,8 +103,7 @@ it('does not notify when run has no requested user', function () {
     $csvPath = createNotificationTestCsv([baseImportRowForNotificationTest()]);
     $run = createRunForNotificationTest($csvPath, null);
 
-    $job = new ProcessOperationCsvImportJob($run->id);
-    $job->handle(app(OperationCsvImporter::class));
+    processNotificationImportRunPipeline($run->id);
 
     Notification::assertNothingSent();
 });
@@ -188,4 +188,24 @@ function createRunForNotificationTest(string $filePath, ?int $requestedByUserId)
         'requested_by_user_id' => $requestedByUserId,
         'queued_at' => now(),
     ]);
+}
+
+function processNotificationImportRunPipeline(int $runId): void
+{
+    $importer = app(OperationCsvImporter::class);
+
+    $job = new ProcessOperationCsvImportJob($runId);
+    $job->handle($importer);
+
+    $chunkIds = OperationImportRunChunk::query()
+        ->where('operation_import_run_id', $runId)
+        ->pluck('id');
+
+    foreach ($chunkIds as $chunkId) {
+        $chunkJob = new ProcessOperationCsvImportChunkJob((int) $chunkId);
+        $chunkJob->handle($importer);
+    }
+
+    $finalizeJob = new FinalizeOperationCsvImportRunJob($runId);
+    $finalizeJob->handle();
 }

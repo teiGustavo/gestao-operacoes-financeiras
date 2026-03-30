@@ -68,17 +68,30 @@ class OperationCsvImporter
      *
      * @throws InvalidArgumentException | InfrastructureUnavailableException
      */
-    public function importWithSummary(string $filePath, ?int $operationImportRunId = null): array
-    {
+    public function importWithSummary(
+        string $filePath,
+        ?int $operationImportRunId = null,
+        ?int $startLineNumber = null,
+        ?int $endLineNumber = null,
+        bool $shouldValidateHeader = true,
+    ): array {
         $totalStart = microtime(true);
 
         $extractStart = microtime(true);
-        $extractedData = $this->operationImportDataExtractor->extract($filePath);
+        $extractedData = $this->operationImportDataExtractor->extract(
+            filePath: $filePath,
+            startLineNumber: $startLineNumber,
+            endLineNumber: $endLineNumber,
+        );
         $extractElapsed = microtime(true) - $extractStart;
 
-        $headerValidationStart = microtime(true);
-        $this->operationImportHeaderValidator->validate($extractedData->headers, self::EXPECTED_HEADERS);
-        $headerValidationElapsed = microtime(true) - $headerValidationStart;
+        $headerValidationElapsed = 0.0;
+
+        if ($shouldValidateHeader) {
+            $headerValidationStart = microtime(true);
+            $this->operationImportHeaderValidator->validate($extractedData->headers, self::EXPECTED_HEADERS);
+            $headerValidationElapsed = microtime(true) - $headerValidationStart;
+        }
 
         $rowValidationElapsed = 0.0;
         $persistElapsed = 0.0;
@@ -204,6 +217,29 @@ class OperationCsvImporter
                 'persist_breakdown' => $persistBreakdown,
             ],
         ];
+    }
+
+    public function countDataRows(string $filePath): int
+    {
+        if (! is_file($filePath) || ! is_readable($filePath)) {
+            throw new InvalidArgumentException('arquivo csv nao encontrado');
+        }
+
+        $handle = fopen($filePath, 'rb');
+
+        if ($handle === false) {
+            throw new InvalidArgumentException('arquivo csv nao pode ser lido');
+        }
+
+        $lineCount = 0;
+
+        while (fgets($handle) !== false) {
+            $lineCount++;
+        }
+
+        fclose($handle);
+
+        return max(0, $lineCount - 1);
     }
 
     /**

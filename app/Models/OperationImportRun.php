@@ -97,4 +97,12 @@ class OperationImportRun extends Model
     {
         return $this->hasMany(OperationImportStagingRow::class);
     }
+
+    /**
+     * @return HasMany<OperationImportRunChunk, $this>
+     */
+    public function chunks(): HasMany
+    {
+        return $this->hasMany(OperationImportRunChunk::class);
+    }
 }

@@ -6,15 +6,20 @@ namespace App\Infrastructure\Import\Jobs;
 
 use App\Infrastructure\Import\OperationCsvImporter;
 use App\Models\OperationImportRun;
+use App\Models\OperationImportRunChunk;
 use App\Notifications\OperationImportFinishedNotification;
 use Illuminate\Contracts\Queue\ShouldBeUnique;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
+use Illuminate\Support\Carbon;
+use Illuminate\Support\Collection;
 use Throwable;
 
 final class ProcessOperationCsvImportJob implements ShouldBeUnique, ShouldQueue
 {
     use Queueable;
+
+    private const int WORKER_LINES_CHUNK_SIZE = 10_000;
 
     public int $tries = 3;
 
@@ -54,25 +59,43 @@ final class ProcessOperationCsvImportJob implements ShouldBeUnique, ShouldQueue
         $operationImportRun = OperationImportRun::query()->findOrFail($this->operationImportRunId);
 
         try {
-            $summary = $operationCsvImporter->importWithSummary(
-                filePath: $operationImportRun->file_path,
-                operationImportRunId: $operationImportRun->id,
-            );
+            $operationCsvImporter->ensureHeaderIsValid($operationImportRun->file_path);
+
+            $totalRows = $operationCsvImporter->countDataRows($operationImportRun->file_path);
 
             $operationImportRun->forceFill([
-                'status' => $summary['rejected_rows'] > 0
-                    ? OperationImportRun::STATUS_COMPLETED_WITH_ERRORS
-                    : OperationImportRun::STATUS_COMPLETED,
-                'total_rows' => $summary['total_rows'],
-                'imported_rows' => $summary['imported_rows'],
-                'rejected_rows' => $summary['rejected_rows'],
-                'error_summary' => $summary['error_summary'],
-                'metrics' => $summary['metrics'],
-                'finished_at' => now(),
-                'error_code' => null,
+                'total_rows' => $totalRows,
             ])->save();
 
-            $this->notifyRequestedByUser($operationImportRun);
+            if ($totalRows === 0) {
+                $operationImportRun->forceFill([
+                    'status' => OperationImportRun::STATUS_COMPLETED,
+                    'imported_rows' => 0,
+                    'rejected_rows' => 0,
+                    'error_summary' => [],
+                    'metrics' => ['total' => 0.0],
+                    'finished_at' => now(),
+                    'error_code' => null,
+                ])->save();
+
+                $this->notifyRequestedByUser($operationImportRun);
+
+                return;
+            }
+
+            $chunks = $this->buildChunkPayloads($operationImportRun->id, $totalRows);
+            OperationImportRunChunk::query()->insert($chunks->all());
+
+            $chunkIds = OperationImportRunChunk::query()
+                ->where('operation_import_run_id', $operationImportRun->id)
+                ->orderBy('chunk_index')
+                ->pluck('id');
+
+            foreach ($chunkIds as $chunkId) {
+                dispatch(new ProcessOperationCsvImportChunkJob((int) $chunkId));
+            }
+
+            dispatch(new FinalizeOperationCsvImportRunJob($operationImportRun->id));
         } catch (Throwable $throwable) {
             $operationImportRun->forceFill([
                 'status' => OperationImportRun::STATUS_FAILED,
@@ -85,6 +108,45 @@ final class ProcessOperationCsvImportJob implements ShouldBeUnique, ShouldQueue
 
             throw $throwable;
         }
+    }
+
+    /**
+     * @return Collection<int, array{operation_import_run_id:int,chunk_index:int,start_line_number:int,end_line_number:int,status:string,total_rows:int,imported_rows:int,rejected_rows:int,error_summary:null,metrics:null,failure_message:null,started_at:null,finished_at:null,created_at:Carbon,updated_at:Carbon}>
+     */
+    private function buildChunkPayloads(int $operationImportRunId, int $totalRows): Collection
+    {
+        $now = now();
+        $payloads = collect();
+        $chunkIndex = 1;
+        $dataRowStart = 1;
+
+        while ($dataRowStart <= $totalRows) {
+            $dataRowEnd = min($dataRowStart + self::WORKER_LINES_CHUNK_SIZE - 1, $totalRows);
+
+            $payloads->push([
+                'operation_import_run_id' => $operationImportRunId,
+                'chunk_index' => $chunkIndex,
+                // +1 because line 1 is the CSV header.
+                'start_line_number' => $dataRowStart + 1,
+                'end_line_number' => $dataRowEnd + 1,
+                'status' => OperationImportRunChunk::STATUS_PENDING,
+                'total_rows' => 0,
+                'imported_rows' => 0,
+                'rejected_rows' => 0,
+                'error_summary' => null,
+                'metrics' => null,
+                'failure_message' => null,
+                'started_at' => null,
+                'finished_at' => null,
+                'created_at' => $now,
+                'updated_at' => $now,
+            ]);
+
+            $dataRowStart = $dataRowEnd + 1;
+            $chunkIndex++;
+        }
+
+        return $payloads;
     }
 
     public function uniqueId(): string

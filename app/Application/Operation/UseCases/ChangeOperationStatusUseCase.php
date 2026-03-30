@@ -6,6 +6,7 @@ namespace App\Application\Operation\UseCases;
 
 use App\Application\Operation\Data\ChangeOperationStatusInput;
 use App\Application\Operation\Data\ChangeOperationStatusOutput;
+use App\Application\Shared\Contracts\TransactionManagerInterface;
 use App\Domain\Operation\Contracts\Repositories\OperationRepositoryInterface;
 use App\Domain\Operation\Contracts\Repositories\OperationStatusHistoryRepositoryInterface;
 use App\Domain\Operation\Entities\OperationStatusHistory;
@@ -21,6 +22,7 @@ final readonly class ChangeOperationStatusUseCase
         private OperationRepositoryInterface $operationRepository,
         private OperationStatusHistoryRepositoryInterface $operationStatusHistoryRepository,
         private OperationLifecycleService $operationLifecycleService,
+        private TransactionManagerInterface $transactionManager,
     ) {}
 
     /**
@@ -48,17 +50,21 @@ final readonly class ChangeOperationStatusUseCase
             return Result::failure(...$statusChangeResult->errors());
         }
 
-        $updatedOperation = $this->operationRepository->save($statusChangeResult->value());
+        $updatedOperation = $this->transactionManager->run(function () use ($statusChangeResult, $operation, $input) {
+            $persistedOperation = $this->operationRepository->save($statusChangeResult->value());
 
-        $this->operationStatusHistoryRepository->append(new OperationStatusHistory(
-            id: null,
-            operationId: (int) $updatedOperation->id,
-            previousStatus: $operation->status,
-            newStatus: $updatedOperation->status,
-            changedByUserId: $input->changedByUserId,
-            notes: $input->notes,
-            changedAt: new DateTimeImmutable('now'),
-        ));
+            $this->operationStatusHistoryRepository->append(new OperationStatusHistory(
+                id: null,
+                operationId: (int) $persistedOperation->id,
+                previousStatus: $operation->status,
+                newStatus: $persistedOperation->status,
+                changedByUserId: $input->changedByUserId,
+                notes: $input->notes,
+                changedAt: new DateTimeImmutable('now'),
+            ));
+
+            return $persistedOperation;
+        });
 
         return Result::success(ChangeOperationStatusOutput::fromOperation($updatedOperation));
     }

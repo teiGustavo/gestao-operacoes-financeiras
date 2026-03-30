@@ -286,6 +286,17 @@ difícil de implementar).
 - `UNIQUE KEY idx_users_email (email)`
 - `UNIQUE KEY idx_users_username (username)`
 
+**Seed Inicial (Autenticação):**
+- Seeder: `AdminUserSeeder`
+- Objetivo: garantir um usuário administrador padrão para acesso inicial do sistema.
+- Registro criado/atualizado de forma idempotente:
+  - `name`: `Administrador`
+  - `email`: `admin@finance.local`
+  - `username`: `admin`
+  - `password`: `admin123` (armazenada com hash no banco)
+
+> As credenciais acima são exibidas para conveniência apenas em ambiente `local/testing` na tela de login.
+
 ### 7. OperationImportRuns (Execuções de Importação de Operações)
 
 **Colunas:**

@@ -6,6 +6,7 @@ namespace App\Domain\Operation\Services;
 
 use App\Domain\Operation\Entities\Operation;
 use App\Domain\Operation\OperationStatus;
+use App\Domain\Operation\OperationStatusTransitions;
 use App\Domain\Operation\ProductType;
 use App\Domain\Shared\Result\DomainError;
 use App\Domain\Shared\Result\ErrorCode;
@@ -95,17 +96,6 @@ final class OperationLifecycleService
      */
     public function changeStatus(Operation $operation, OperationStatus $newStatus, ?string $paymentDate): Result
     {
-        $allowedTransitions = [
-            OperationStatus::DRAFT->value => [OperationStatus::PRE_ANALYSIS],
-            OperationStatus::PRE_ANALYSIS->value => [OperationStatus::UNDER_REVIEW, OperationStatus::CANCELED],
-            OperationStatus::UNDER_REVIEW->value => [OperationStatus::AWAITING_SIGNATURE, OperationStatus::CANCELED],
-            OperationStatus::AWAITING_SIGNATURE->value => [OperationStatus::SIGNATURE_COMPLETED, OperationStatus::CANCELED],
-            OperationStatus::SIGNATURE_COMPLETED->value => [OperationStatus::APPROVED, OperationStatus::CANCELED],
-            OperationStatus::APPROVED->value => [OperationStatus::DISBURSED, OperationStatus::CANCELED],
-            OperationStatus::CANCELED->value => [],
-            OperationStatus::DISBURSED->value => [],
-        ];
-
         if ($operation->status === $newStatus) {
             return Result::failure(new DomainError(
                 code: ErrorCode::OperationStatusUnchanged,
@@ -113,7 +103,7 @@ final class OperationLifecycleService
             ));
         }
 
-        $availableStatuses = $allowedTransitions[$operation->status->value] ?? [];
+        $availableStatuses = OperationStatusTransitions::allowedFrom($operation->status);
 
         if (! in_array($newStatus, $availableStatuses, true)) {
             return Result::failure(new DomainError(

@@ -18,6 +18,10 @@ Mesmo sendo a versão estável mais nova, ela já tem um tempo considerável de 
 pois foi lançada em Novembro/2025 e já possui patches de correção
 (o que a comunidade gosta de esperar antes de adotar uma nova versão).
 
+### Alpine.js:
+Para possibilitar um desenvolvimento mais otimizado, adicionando reatividade 
+e interatividade ao frontend sem a necessidade de um framework JavaScript completo.
+
 ### Filament:
 Escolhido para o otimizar o tempo e focar em performance/modelagem.
 

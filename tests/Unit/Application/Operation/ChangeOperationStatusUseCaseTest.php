@@ -6,6 +6,7 @@ use App\Application\Operation\Data\ChangeOperationStatusInput;
 use App\Application\Operation\Data\RegisterOperationInput;
 use App\Application\Operation\UseCases\ChangeOperationStatusUseCase;
 use App\Application\Operation\UseCases\RegisterOperationUseCase;
+use App\Application\Shared\Contracts\TransactionManagerInterface;
 use App\Domain\Operation\OperationStatus;
 use App\Domain\Operation\ProductType;
 use App\Domain\Operation\Services\OperationLifecycleService;
@@ -20,6 +21,13 @@ it('returns not found when operation does not exist', function () {
         operationRepository: new InMemoryOperationRepository,
         operationStatusHistoryRepository: $historyRepository,
         operationLifecycleService: new OperationLifecycleService,
+        transactionManager: new class implements TransactionManagerInterface
+        {
+            public function run(Closure $callback): mixed
+            {
+                return $callback();
+            }
+        },
     );
 
     $result = $useCase->execute(new ChangeOperationStatusInput(
@@ -65,6 +73,13 @@ it('changes status and appends history when transition is valid', function () {
         operationRepository: $operationRepository,
         operationStatusHistoryRepository: $historyRepository,
         operationLifecycleService: $lifecycleService,
+        transactionManager: new class implements TransactionManagerInterface
+        {
+            public function run(Closure $callback): mixed
+            {
+                return $callback();
+            }
+        },
     );
 
     $result = $useCase->execute(new ChangeOperationStatusInput(
@@ -118,6 +133,13 @@ it('does not append history when transition is invalid', function () {
         operationRepository: $operationRepository,
         operationStatusHistoryRepository: $historyRepository,
         operationLifecycleService: $lifecycleService,
+        transactionManager: new class implements TransactionManagerInterface
+        {
+            public function run(Closure $callback): mixed
+            {
+                return $callback();
+            }
+        },
     );
 
     $result = $useCase->execute(new ChangeOperationStatusInput(

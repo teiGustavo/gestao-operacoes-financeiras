@@ -22,8 +22,11 @@ pois foi lançada em Novembro/2025 e já possui patches de correção
 Para possibilitar um desenvolvimento mais otimizado, adicionando reatividade 
 e interatividade ao frontend sem a necessidade de um framework JavaScript completo.
 
-### Filament:
-Escolhido para o otimizar o tempo e focar em performance/modelagem.
+~~### Filament:
+Escolhido para o otimizar o tempo e focar em performance/modelagem.~~
+> Foi optado por criar as interfaces de usuário do zero, utilizando apenas Tailwind CSS,
+  pois o `Filament` gera um acoplamento muito grande, e, principalmente, 
+  adiciona muitas mágicas (que escondem o propósito do teste).
 
 ### Tailwind CSS:
 Para possibilitar o desenvolvimento mais otimizado e `mobile-first` 

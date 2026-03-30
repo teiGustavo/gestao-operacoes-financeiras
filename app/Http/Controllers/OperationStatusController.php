@@ -10,6 +10,8 @@ use App\Domain\Operation\OperationStatus;
 use App\Domain\Shared\Result\DomainError;
 use App\Domain\Shared\Result\ErrorCode;
 use App\Http\Requests\UpdateOperationStatusRequest;
+use App\Http\Resources\Operation\OperationStatusUpdateErrorResource;
+use App\Http\Resources\Operation\OperationStatusUpdateSuccessResource;
 use App\Models\Operation;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -41,7 +43,7 @@ class OperationStatusController extends Controller
                     ]);
             }
 
-            return response()->json([
+            return response()->json(OperationStatusUpdateErrorResource::make([
                 'message' => 'Falha ao alterar status da operacao.',
                 'errors' => array_map(
                     static fn (DomainError $error): array => [
@@ -51,7 +53,7 @@ class OperationStatusController extends Controller
                     ],
                     $result->errors(),
                 ),
-            ], $statusCode);
+            ])->resolve($request), $statusCode);
         }
 
         if (! $request->expectsJson()) {
@@ -62,13 +64,11 @@ class OperationStatusController extends Controller
                 ->with('status', 'Status da operacao atualizado com sucesso.');
         }
 
-        return response()->json([
+        return response()->json(OperationStatusUpdateSuccessResource::make([
             'message' => 'Status da operacao atualizado com sucesso.',
-            'data' => [
-                'operation_id' => $result->value()->operationId,
-                'status' => $result->value()->status->value,
-                'payment_date' => $result->value()->paymentDate,
-            ],
-        ]);
+            'operation_id' => $result->value()->operationId,
+            'status' => $result->value()->status->value,
+            'payment_date' => $result->value()->paymentDate,
+        ])->resolve($request));
     }
 }

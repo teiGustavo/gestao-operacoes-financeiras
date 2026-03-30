@@ -62,6 +62,7 @@ final class OperationDetailsQuery
                 ->map(static function (Installment $installment): array {
                     return [
                         'id' => $installment->id,
+                        'operation_id' => $installment->operation_id,
                         'installment_number' => (int) $installment->installment_number,
                         'due_date' => $installment->due_date?->format('Y-m-d'),
                         'value' => (float) $installment->value,

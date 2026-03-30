@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers;
 
+use App\Http\Resources\Operation\OperationDetailsResource;
 use App\Http\ViewModels\Operation\OperationDetailsViewModel;
 use App\Infrastructure\Queries\Operation\OperationDetailsQuery;
 use App\Models\Operation;
@@ -29,8 +30,6 @@ class OperationDetailsController extends Controller
             return view('operations.show', $this->operationDetailsViewModel->toArray($details));
         }
 
-        return response()->json([
-            'data' => $details,
-        ]);
+        return OperationDetailsResource::make($details)->response();
     }
 }

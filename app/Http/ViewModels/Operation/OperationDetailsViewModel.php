@@ -7,6 +7,7 @@ namespace App\Http\ViewModels\Operation;
 use App\Domain\Operation\OperationStatus;
 use App\Domain\Operation\OperationStatusTransitions;
 use App\Domain\Operation\ProductType;
+use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Carbon;
 
 final class OperationDetailsViewModel
@@ -19,6 +20,7 @@ final class OperationDetailsViewModel
      *     blockedStatuses: array<int, array{label: string, reason: string}>,
      *     statusSelectability: array<string, bool>,
      *     statusBlockedReasons: array<string, string>,
+     *     installmentsPaginator: LengthAwarePaginator<int, array<string, mixed>>,
      *     selectedStatus: string,
      *     page: array{title: string}
      * }
@@ -62,10 +64,13 @@ final class OperationDetailsViewModel
         $operation['product_label'] = ProductType::from((string) $operation['product_type'])->label();
         $operation['requested_value_display'] = $this->formatCurrency((float) $operation['requested_value']);
 
-        $operation['installments'] = collect($operation['installments'] ?? [])
+        $formattedInstallments = collect($operation['installments'] ?? [])
             ->map(fn (array $installment): array => $this->formatInstallment($installment))
             ->values()
             ->all();
+
+        $installmentsPaginator = $this->paginateInstallments($formattedInstallments);
+        $operation['installments'] = $installmentsPaginator->items();
 
         $operation['history'] = collect($operation['history'] ?? [])
             ->map(fn (array $historyItem): array => $this->formatHistoryItem($historyItem))
@@ -78,6 +83,7 @@ final class OperationDetailsViewModel
             'blockedStatuses' => $blockedStatuses,
             'statusSelectability' => $statusSelectability,
             'statusBlockedReasons' => $statusBlockedReasons,
+            'installmentsPaginator' => $installmentsPaginator,
             'selectedStatus' => $selectedStatus,
             'page' => [
                 'title' => 'Detalhe da Operação',
@@ -103,8 +109,37 @@ final class OperationDetailsViewModel
         $installment['status_label'] = (bool) ($installment['paid'] ?? false)
             ? 'Pago'
             : ($isOverdue ? 'Vencida' : 'Em aberto');
+        $installment['can_be_paid'] = ! (bool) ($installment['paid'] ?? false);
+        $installment['pay_action'] = route('operations.installments.pay', [
+            'operation' => (int) $installment['operation_id'],
+            'installment' => (int) $installment['id'],
+        ]);
 
         return $installment;
+    }
+
+    /**
+     * @param  array<int, array<string, mixed>>  $installments
+     * @return LengthAwarePaginator<int, array<string, mixed>>
+     */
+    private function paginateInstallments(array $installments): LengthAwarePaginator
+    {
+        $perPage = 10;
+        $currentPage = max(1, (int) request()->integer('installments_page', 1));
+        $total = count($installments);
+        $items = array_values(array_slice($installments, ($currentPage - 1) * $perPage, $perPage));
+
+        return new LengthAwarePaginator(
+            items: $items,
+            total: $total,
+            perPage: $perPage,
+            currentPage: $currentPage,
+            options: [
+                'path' => request()->url(),
+                'pageName' => 'installments_page',
+                'query' => request()->except('installments_page'),
+            ],
+        );
     }
 
     /**

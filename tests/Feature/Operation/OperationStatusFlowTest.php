@@ -17,6 +17,15 @@ uses(RefreshDatabase::class);
 
 it('requires authentication for operation detail and status update endpoints', function () {
     $operation = createOperationWithApprovedStatus();
+    $installment = Installment::query()->create([
+        'operation_id' => $operation->id,
+        'installment_number' => 1,
+        'due_date' => '2026-06-10',
+        'value' => 105,
+        'paid' => false,
+        'paid_at' => null,
+        'paid_by_user_id' => null,
+    ]);
 
     $this->getJson(route('operations.show', $operation))->assertUnauthorized();
 
@@ -25,6 +34,14 @@ it('requires authentication for operation detail and status update endpoints', f
             '_token' => 'test-csrf-token',
             'status' => OperationStatus::DISBURSED->value,
             'payment_date' => '2026-05-02',
+        ])->assertUnauthorized();
+
+    $this->withSession(['_token' => 'test-csrf-token'])
+        ->patchJson(route('operations.installments.pay', [
+            'operation' => $operation,
+            'installment' => $installment,
+        ]), [
+            '_token' => 'test-csrf-token',
         ])->assertUnauthorized();
 });
 
@@ -181,6 +198,116 @@ it('renders installments section on operation details page', function () {
         ->assertSee($user->name);
 });
 
+it('paginates installments section on operation details page', function () {
+    $operation = createOperationWithApprovedStatus();
+    $user = User::factory()->create();
+
+    foreach (range(1, 12) as $number) {
+        Installment::query()->create([
+            'operation_id' => $operation->id,
+            'installment_number' => $number,
+            'due_date' => '2026-06-10',
+            'value' => 105,
+            'paid' => false,
+            'paid_at' => null,
+            'paid_by_user_id' => null,
+        ]);
+    }
+
+    $this->actingAs($user)
+        ->get(route('operations.show', ['operation' => $operation->id]))
+        ->assertSuccessful()
+        ->assertSee('Parcela')
+        ->assertSee('>10<', false)
+        ->assertDontSee('>11<', false)
+        ->assertSee('installments_page=2', false);
+
+    $this->actingAs($user)
+        ->get(route('operations.show', ['operation' => $operation->id, 'installments_page' => 2]))
+        ->assertSuccessful()
+        ->assertSee('>11<', false)
+        ->assertSee('>12<', false)
+        ->assertDontSee('>10<', false);
+});
+
+it('marks an installment as paid from details page and updates operation counter', function () {
+    $operation = createOperationWithApprovedStatus();
+    $user = User::factory()->create();
+
+    $installment = Installment::query()->create([
+        'operation_id' => $operation->id,
+        'installment_number' => 1,
+        'due_date' => '2026-06-10',
+        'value' => 105,
+        'paid' => false,
+        'paid_at' => null,
+        'paid_by_user_id' => null,
+    ]);
+
+    $this->actingAs($user)
+        ->withSession(['_token' => 'test-csrf-token'])
+        ->patch(route('operations.installments.pay', [
+            'operation' => $operation,
+            'installment' => $installment,
+        ]), [
+            '_token' => 'test-csrf-token',
+            'redirect_to' => route('operations.show', ['operation' => $operation->id]),
+        ])
+        ->assertRedirect(route('operations.show', ['operation' => $operation->id]));
+
+    $this->actingAs($user)
+        ->get(route('operations.show', ['operation' => $operation->id]))
+        ->assertSuccessful()
+        ->assertSee('Parcela marcada como paga com sucesso.')
+        ->assertSee('Pago')
+        ->assertSee('Quitada');
+
+    $paidInstallment = Installment::query()->findOrFail($installment->id);
+
+    expect($paidInstallment->paid)->toBeTrue()
+        ->and($paidInstallment->paid_by_user_id)->toBe($user->id)
+        ->and($paidInstallment->paid_at)->not->toBeNull()
+        ->and(Operation::query()->findOrFail($operation->id)->paid_installments_count)
+        ->toBe(1);
+});
+
+it('marks an installment as paid through json endpoint with stable contract', function () {
+    $operation = createOperationWithApprovedStatus();
+    $user = User::factory()->create();
+
+    $installment = Installment::query()->create([
+        'operation_id' => $operation->id,
+        'installment_number' => 1,
+        'due_date' => '2026-06-10',
+        'value' => 105,
+        'paid' => false,
+        'paid_at' => null,
+        'paid_by_user_id' => null,
+    ]);
+
+    $this->actingAs($user)
+        ->withSession(['_token' => 'test-csrf-token'])
+        ->patchJson(route('operations.installments.pay', [
+            'operation' => $operation,
+            'installment' => $installment,
+        ]), [
+            '_token' => 'test-csrf-token',
+        ])
+        ->assertSuccessful()
+        ->assertJsonStructure([
+            'message',
+            'data' => [
+                'operation_id',
+                'installment_id',
+                'paid',
+            ],
+        ])
+        ->assertJsonPath('message', 'Parcela marcada como paga com sucesso.')
+        ->assertJsonPath('data.operation_id', $operation->id)
+        ->assertJsonPath('data.installment_id', $installment->id)
+        ->assertJsonPath('data.paid', true);
+});
+
 it('changes status to disbursed and appends history', function () {
     $operation = createOperationWithApprovedStatus();
     $user = User::factory()->create();
@@ -198,6 +325,7 @@ it('changes status to disbursed and appends history', function () {
             'message',
             'data' => ['operation_id', 'status', 'payment_date'],
         ])
+        ->assertJsonPath('message', 'Status da operacao atualizado com sucesso.')
         ->assertJsonPath('data.status', OperationStatus::DISBURSED->value)
         ->assertJsonPath('data.payment_date', '2026-05-02');
 
@@ -231,6 +359,7 @@ it('rejects invalid status transition and does not append history', function () 
                 'context',
             ]],
         ])
+        ->assertJsonPath('message', 'Falha ao alterar status da operacao.')
         ->assertJsonPath('errors.0.code', 'OPERATION_STATUS_TRANSITION_INVALID');
 
     expect(OperationStatusHistory::query()->where('operation_id', $operation->id)->count())->toBe(0);

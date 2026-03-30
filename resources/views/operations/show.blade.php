@@ -155,6 +155,7 @@
                                     <th class="px-3 py-2 text-left font-semibold text-slate-700">Situação</th>
                                     <th class="px-3 py-2 text-left font-semibold text-slate-700">Pagamento</th>
                                     <th class="px-3 py-2 text-left font-semibold text-slate-700">Usuário</th>
+                                    <th class="px-3 py-2 text-left font-semibold text-slate-700">Ação</th>
                                 </tr>
                             </thead>
                             <tbody class="divide-y divide-slate-100">
@@ -168,10 +169,31 @@
                                         </td>
                                         <td class="px-3 py-2">{{ $installment['paid_at_display'] }}</td>
                                         <td class="px-3 py-2">{{ $installment['paid_by_user']['name'] ?? '-' }}</td>
+                                        <td class="px-3 py-2">
+                                            @if ($installment['can_be_paid'])
+                                                <form method="POST" action="{{ $installment['pay_action'] }}">
+                                                    @csrf
+                                                    @method('PATCH')
+                                                    <input type="hidden" name="redirect_to" value="{{ request()->fullUrl() }}">
+                                                    <button
+                                                        type="submit"
+                                                        class="inline-flex items-center justify-center rounded-md bg-slate-900 px-2 py-1 text-xs font-medium text-white transition hover:bg-slate-700"
+                                                    >
+                                                        Marcar como paga
+                                                    </button>
+                                                </form>
+                                            @else
+                                                <span class="text-xs text-slate-500">Quitada</span>
+                                            @endif
+                                        </td>
                                     </tr>
                                 @endforeach
                             </tbody>
                         </table>
+                    </div>
+
+                    <div class="mt-4">
+                        {{ $installmentsPaginator->onEachSide(1)->links() }}
                     </div>
                 @endif
             </div>

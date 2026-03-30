@@ -357,6 +357,11 @@ facilidade de uso,
 por utilizar `yield` internamente para otimizar o consumo de memória
 e por não ter grandes dependências indiretas.
 
+> Atualização: Optei por não utilizar a biblioteca `Spatie/Simple-Excel` por 
+  também adicionar uma mágica que omite o raciocínio do processo de importação,
+  um dos pilares principais do teste. 
+  (em um caso de produção, ela seria provavelmente utilizada, dependendo das necessidades)
+
 ---
 
 ### Problema 03 - Abordagem de processamento assíncrono

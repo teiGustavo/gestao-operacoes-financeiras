@@ -77,7 +77,7 @@ queue-work-imports: ## Processa fila imports no container app (manual/bloqueante
 	$(COMPOSE_CMD) exec $(APP_SERVICE) php artisan queue:work --queue=imports,default --tries=3 --timeout=120
 
 queue-worker-start: ## Sobe mysql e escala imports-worker (use IMPORT_WORKERS='6')
-	IMPORT_WORKERS=$(IMPORT_WORKERS) $(COMPOSE_CMD) up -d app mysql imports-worker --scale imports-worker=$(IMPORT_WORKERS)
+	$(COMPOSE_CMD) up -d mysql imports-worker --scale imports-worker=$(IMPORT_WORKERS)
 
 queue-worker-stop: ## Para os servicos dedicados imports-worker
 	$(COMPOSE_CMD) stop imports-worker

@@ -10,8 +10,7 @@ O projeto usa fila em banco (`QUEUE_CONNECTION=database`) e o serviço `imports-
 
 ## Como a importação paralela funciona
 
-- O job orquestrador (`ProcessOperationCsvImportJob`) valida o cabeçalho e divide o arquivo em chunks com tamanho dinâmico.
-- O tamanho de chunk é calculado automaticamente por execução com base em `IMPORT_WORKERS`.
+- O job orquestrador (`ProcessOperationCsvImportJob`) valida o cabeçalho e divide o arquivo em chunks de `10.000` linhas.
 - Os chunks são registrados em `operation_import_run_chunks` com:
   - `start_line_number`
   - `end_line_number`
@@ -61,7 +60,7 @@ make queue-worker-status
 make queue-worker-stop
 ```
 
-> Exemplo de comando gerado pelo `Makefile`: `IMPORT_WORKERS=8 docker compose up -d app mysql imports-worker --scale imports-worker=8`.
+> Exemplo de comando gerado pelo `Makefile`: `docker compose up -d mysql imports-worker --scale imports-worker=8`.
 
 > Mantenha os dois lados com o mesmo número: `IMPORT_WORKERS` (config do app/chunk plan) e `--scale imports-worker` (concorrência real de processamento).
 

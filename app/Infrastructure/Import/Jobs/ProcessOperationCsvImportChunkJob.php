@@ -185,15 +185,24 @@ final class ProcessOperationCsvImportChunkJob implements ShouldBeUnique, ShouldQ
 
     private function isRetryableInfrastructureFailure(Throwable $throwable): bool
     {
-        if (! $throwable instanceof QueryException) {
-            return false;
+        $current = $throwable;
+
+        while ($current !== null) {
+            if ($current instanceof QueryException) {
+                $sqlState = (string) ($current->errorInfo[0] ?? '');
+                $driverCode = (int) ($current->errorInfo[1] ?? 0);
+
+                return in_array($sqlState, ['40001', 'HY000'], true)
+                    && in_array($driverCode, [1205, 1213], true);
+            }
+
+            $current = $current->getPrevious();
         }
 
-        $sqlState = (string) ($throwable->errorInfo[0] ?? '');
-        $driverCode = (int) ($throwable->errorInfo[1] ?? 0);
+        $message = mb_strtolower($throwable->getMessage());
 
-        return in_array($sqlState, ['40001', 'HY000'], true)
-            && in_array($driverCode, [1205, 1213], true);
+        return str_contains($message, 'sqlstate[40001]')
+            && (str_contains($message, '1213') || str_contains($message, '1205'));
     }
 
     private function normalizeFailureMessage(?string $message): string

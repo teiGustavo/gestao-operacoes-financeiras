@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Infrastructure\Exceptions\InfrastructureUnavailableException;
 use App\Infrastructure\Import\Jobs\FinalizeOperationCsvImportRunJob;
 use App\Infrastructure\Import\Jobs\ProcessOperationCsvImportChunkJob;
 use App\Infrastructure\Import\Jobs\ProcessOperationCsvImportJob;
@@ -267,9 +268,7 @@ it('does not reprocess a run that is already processing', function () {
         ->and(Installment::query()->count())->toBe(0);
 });
 
-it('splits large imports according to configured available workers', function () {
-    config()->set('imports.parallel_workers', 4);
-
+it('splits large imports into workers of ten thousand data rows', function () {
     $rows = [];
 
     for ($index = 0; $index < 10_001; $index++) {
@@ -295,19 +294,14 @@ it('splits large imports according to configured available workers', function ()
         ->orderBy('chunk_index')
         ->get();
 
-    expect($chunks)->toHaveCount(4)
+    expect($chunks)->toHaveCount(2)
         ->and($chunks[0]->start_line_number)->toBe(2)
-        ->and($chunks[0]->end_line_number)->toBe(2_502)
+        ->and($chunks[0]->end_line_number)->toBe(10_001)
         ->and($chunks[0]->start_byte_offset)->toBeInt()
-        ->and($chunks[1]->start_line_number)->toBe(2_503)
-        ->and($chunks[1]->end_line_number)->toBe(5_003)
+        ->and($chunks[1]->start_line_number)->toBe(10_002)
+        ->and($chunks[1]->end_line_number)->toBe(10_002)
         ->and($chunks[1]->start_byte_offset)->toBeInt()
-        ->and($chunks[1]->start_byte_offset)->toBeGreaterThan($chunks[0]->start_byte_offset)
-        ->and($chunks[2]->start_line_number)->toBe(5_004)
-        ->and($chunks[2]->end_line_number)->toBe(7_504)
-        ->and($chunks[3]->start_line_number)->toBe(7_505)
-        ->and($chunks[3]->end_line_number)->toBe(10_002)
-        ->and($chunks[3]->start_byte_offset)->toBeGreaterThan($chunks[2]->start_byte_offset);
+        ->and($chunks[1]->start_byte_offset)->toBeGreaterThan($chunks[0]->start_byte_offset);
 });
 
 it('records infrastructure failure for chunk audit and marks pending staging rows as failed', function () {
@@ -412,6 +406,60 @@ it('keeps chunk pending on retryable deadlock errors and records retry audit wit
     try {
         $job->handle($importer);
     } catch (QueryException) {
+    }
+
+    $chunk->refresh();
+
+    $runErrors = OperationImportRunError::query()
+        ->where('operation_import_run_id', $run->id)
+        ->get();
+
+    $stagingRows = OperationImportStagingRow::query()
+        ->where('operation_import_run_id', $run->id)
+        ->orderBy('line_number')
+        ->get();
+
+    expect($chunk->status)->toBe(OperationImportRunChunk::STATUS_PENDING)
+        ->and($chunk->failure_message)->toContain('Deadlock found')
+        ->and($runErrors)->toHaveCount(1)
+        ->and($runErrors->first()?->message)->toContain('retrying')
+        ->and($runErrors->first()?->row_payload['will_retry'] ?? false)->toBeTrue()
+        ->and($stagingRows[0]->status)->toBe(OperationImportStagingRow::STATUS_VALIDATED);
+});
+
+it('keeps chunk pending when deadlock is wrapped by infrastructure exception', function () {
+    $run = OperationImportRun::query()->create([
+        'file_path' => '/tmp/inexistente.csv',
+        'status' => OperationImportRun::STATUS_PROCESSING,
+        'queued_at' => now(),
+        'started_at' => now(),
+    ]);
+
+    $chunk = OperationImportRunChunk::query()->create([
+        'operation_import_run_id' => $run->id,
+        'chunk_index' => 3,
+        'start_line_number' => 21,
+        'end_line_number' => 30,
+        'status' => OperationImportRunChunk::STATUS_PENDING,
+    ]);
+
+    OperationImportStagingRow::query()->create([
+        'operation_import_run_id' => $run->id,
+        'line_number' => 21,
+        'row_payload' => baseImportRow(),
+        'status' => OperationImportStagingRow::STATUS_VALIDATED,
+    ]);
+
+    $importer = Mockery::mock(OperationCsvImporter::class);
+    $importer->shouldReceive('importWithSummary')
+        ->once()
+        ->andThrow(new InfrastructureUnavailableException('Erro ao importar dados: SQLSTATE[40001]: Serialization failure: 1213 Deadlock found when trying to get lock; try restarting transaction'));
+
+    $job = new ProcessOperationCsvImportChunkJob($chunk->id);
+
+    try {
+        $job->handle($importer);
+    } catch (InfrastructureUnavailableException) {
     }
 
     $chunk->refresh();

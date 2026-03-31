@@ -16,7 +16,6 @@ x-imports-worker-base: &imports-worker-base
     DB_USERNAME: ${DB_USERNAME:-root}
     DB_PASSWORD: ${DB_PASSWORD:-root}
     DB_QUEUE_RETRY_AFTER: ${DB_QUEUE_RETRY_AFTER:-150}
-    IMPORT_WORKERS: ${IMPORT_WORKERS:-4}
   command: ["php", "artisan", "queue:work", "--queue=imports,default", "--tries=3", "--timeout=120", "--sleep=3", "--max-jobs=1000", "--max-time=3600"]
   restart: unless-stopped
   depends_on:
@@ -42,7 +41,6 @@ services:
       DB_USERNAME: ${DB_USERNAME:-root}
       DB_PASSWORD: ${DB_PASSWORD:-root}
       DB_QUEUE_RETRY_AFTER: ${DB_QUEUE_RETRY_AFTER:-150}
-      IMPORT_WORKERS: ${IMPORT_WORKERS:-4}
     command: ["php", "artisan", "serve", "--host=0.0.0.0", "--port=8000"]
     depends_on:
       mysql:

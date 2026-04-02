@@ -1,0 +1,167 @@
+<mxGraphModel dx="0" dy="0" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="0" pageScale="1" background="none" math="0" shadow="0">
+  <root>
+    <mxCell id="0" />
+    <mxCell id="1" parent="0" />
+    <mxCell id="node15" parent="1" vertex="1" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;agreements&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0 0 0 4px;line-height:1.6;&quot;&gt; name: varchar(255)&lt;br/&gt; created_at: timestamp&lt;br/&gt; updated_at: timestamp&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0 0 0 4px;line-height:1.6;&quot;&gt; id: bigint unsigned&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=14;fontFamily=Helvetica;html=1;rounded=0;shadow=0;comic=0;labelBackgroundColor=none;strokeWidth=1;">
+      <mxGeometry x="55" y="32" width="171" height="147" as="geometry" />
+    </mxCell>
+    <mxCell id="node1" parent="1" vertex="1" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;cache&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0 0 0 4px;line-height:1.6;&quot;&gt; value: mediumtext&lt;br/&gt; expiration: bigint&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0 0 0 4px;line-height:1.6;&quot;&gt; key: varchar(255)&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=14;fontFamily=Helvetica;html=1;rounded=0;shadow=0;comic=0;labelBackgroundColor=none;strokeWidth=1;">
+      <mxGeometry x="608" y="1504" width="144" height="121" as="geometry" />
+    </mxCell>
+    <mxCell id="node10" parent="1" vertex="1" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;cache_locks&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0 0 0 4px;line-height:1.6;&quot;&gt; owner: varchar(255)&lt;br/&gt; expiration: bigint&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0 0 0 4px;line-height:1.6;&quot;&gt; key: varchar(255)&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=14;fontFamily=Helvetica;html=1;rounded=0;shadow=0;comic=0;labelBackgroundColor=none;strokeWidth=1;">
+      <mxGeometry x="182" y="-176" width="156" height="121" as="geometry" />
+    </mxCell>
+    <mxCell id="node4" parent="1" vertex="1" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;clients&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0 0 0 4px;line-height:1.6;&quot;&gt; name: varchar(255)&lt;br/&gt; cpf: varchar(14)&lt;br/&gt; birth_date: date&lt;br/&gt; gender: varchar(20)&lt;br/&gt; email: varchar(255)&lt;br/&gt; created_at: timestamp&lt;br/&gt; updated_at: timestamp&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0 0 0 4px;line-height:1.6;&quot;&gt; id: bigint unsigned&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=14;fontFamily=Helvetica;html=1;rounded=0;shadow=0;comic=0;labelBackgroundColor=none;strokeWidth=1;">
+      <mxGeometry x="455" y="-236" width="171" height="232" as="geometry" />
+    </mxCell>
+    <mxCell id="node12" parent="1" vertex="1" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;failed_jobs&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0 0 0 4px;line-height:1.6;&quot;&gt; uuid: varchar(255)&lt;br/&gt; connection: text&lt;br/&gt; queue: text&lt;br/&gt; payload: longtext&lt;br/&gt; exception: longtext&lt;br/&gt; failed_at: timestamp&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0 0 0 4px;line-height:1.6;&quot;&gt; id: bigint unsigned&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=14;fontFamily=Helvetica;html=1;rounded=0;shadow=0;comic=0;labelBackgroundColor=none;strokeWidth=1;">
+      <mxGeometry x="83" y="1836" width="155" height="208" as="geometry" />
+    </mxCell>
+    <mxCell id="node13" parent="1" vertex="1" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;installments&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0 0 0 4px;line-height:1.6;&quot;&gt; operation_id: bigint unsigned&lt;br/&gt; installment_number: int&lt;br/&gt; due_date: date&lt;br/&gt; value: decimal(15,2)&lt;br/&gt; paid: tinyint(1)&lt;br/&gt; paid_at: timestamp&lt;br/&gt; paid_by_user_id: bigint unsigned&lt;br/&gt; created_at: timestamp&lt;br/&gt; updated_at: timestamp&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0 0 0 4px;line-height:1.6;&quot;&gt; id: bigint unsigned&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=14;fontFamily=Helvetica;html=1;rounded=0;shadow=0;comic=0;labelBackgroundColor=none;strokeWidth=1;">
+      <mxGeometry x="423" y="1060" width="234" height="280" as="geometry" />
+    </mxCell>
+    <mxCell id="node11" parent="1" vertex="1" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;job_batches&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0 0 0 4px;line-height:1.6;&quot;&gt; name: varchar(255)&lt;br/&gt; total_jobs: int&lt;br/&gt; pending_jobs: int&lt;br/&gt; failed_jobs: int&lt;br/&gt; failed_job_ids: longtext&lt;br/&gt; options: mediumtext&lt;br/&gt; cancelled_at: int&lt;br/&gt; created_at: int&lt;br/&gt; finished_at: int&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0 0 0 4px;line-height:1.6;&quot;&gt; id: varchar(255)&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=14;fontFamily=Helvetica;html=1;rounded=0;shadow=0;comic=0;labelBackgroundColor=none;strokeWidth=1;">
+      <mxGeometry x="-87" y="600" width="174" height="280" as="geometry" />
+    </mxCell>
+    <mxCell id="node7" parent="1" vertex="1" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;jobs&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0 0 0 4px;line-height:1.6;&quot;&gt; queue: varchar(255)&lt;br/&gt; payload: longtext&lt;br/&gt; attempts: tinyint unsigned&lt;br/&gt; reserved_at: int unsigned&lt;br/&gt; available_at: int unsigned&lt;br/&gt; created_at: int unsigned&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0 0 0 4px;line-height:1.6;&quot;&gt; id: bigint unsigned&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=14;fontFamily=Helvetica;html=1;rounded=0;shadow=0;comic=0;labelBackgroundColor=none;strokeWidth=1;">
+      <mxGeometry x="564" y="256" width="193" height="208" as="geometry" />
+    </mxCell>
+    <mxCell id="node0" parent="1" vertex="1" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;migrations&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0 0 0 4px;line-height:1.6;&quot;&gt; migration: varchar(255)&lt;br/&gt; batch: int&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0 0 0 4px;line-height:1.6;&quot;&gt; id: int unsigned&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=14;fontFamily=Helvetica;html=1;rounded=0;shadow=0;comic=0;labelBackgroundColor=none;strokeWidth=1;">
+      <mxGeometry x="571" y="44" width="178" height="121" as="geometry" />
+    </mxCell>
+    <mxCell id="node2" parent="1" vertex="1" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;notifications&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0 0 0 4px;line-height:1.6;&quot;&gt; type: varchar(255)&lt;br/&gt; notifiable_type: varchar(255)&lt;br/&gt; notifiable_id: bigint unsigned&lt;br/&gt; data: text&lt;br/&gt; read_at: timestamp&lt;br/&gt; created_at: timestamp&lt;br/&gt; updated_at: timestamp&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0 0 0 4px;line-height:1.6;&quot;&gt; id: char(36)&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=14;fontFamily=Helvetica;html=1;rounded=0;shadow=0;comic=0;labelBackgroundColor=none;strokeWidth=1;">
+      <mxGeometry x="374" y="1824" width="213" height="232" as="geometry" />
+    </mxCell>
+    <mxCell id="node14" parent="1" vertex="1" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;operation_import_run_errors&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0 0 0 4px;line-height:1.6;&quot;&gt; operation_import_run_id: bigint unsigned&lt;br/&gt; line_number: int unsigned&lt;br/&gt; message: text&lt;br/&gt; row_payload: json&lt;br/&gt; created_at: timestamp&lt;br/&gt; updated_at: timestamp&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0 0 0 4px;line-height:1.6;&quot;&gt; id: bigint unsigned&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=14;fontFamily=Helvetica;html=1;rounded=0;shadow=0;comic=0;labelBackgroundColor=none;strokeWidth=1;">
+      <mxGeometry x="-143" y="2116" width="287" height="208" as="geometry" />
+    </mxCell>
+    <mxCell id="node6" parent="1" vertex="1" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;operation_import_runs&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0 0 0 4px;line-height:1.6;&quot;&gt; file_path: varchar(255)&lt;br/&gt; status: varchar(255)&lt;br/&gt; requested_by_user_id: bigint unsigned&lt;br/&gt; queued_at: timestamp&lt;br/&gt; started_at: timestamp&lt;br/&gt; finished_at: timestamp&lt;br/&gt; total_rows: int unsigned&lt;br/&gt; imported_rows: int unsigned&lt;br/&gt; rejected_rows: int unsigned&lt;br/&gt; error_summary: json&lt;br/&gt; metrics: json&lt;br/&gt; failure_message: text&lt;br/&gt; created_at: timestamp&lt;br/&gt; updated_at: timestamp&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0 0 0 4px;line-height:1.6;&quot;&gt; id: bigint unsigned&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=14;fontFamily=Helvetica;html=1;rounded=0;shadow=0;comic=0;labelBackgroundColor=none;strokeWidth=1;">
+      <mxGeometry x="-135" y="1360" width="271" height="400" as="geometry" />
+    </mxCell>
+    <mxCell id="node8" parent="1" vertex="1" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;operation_import_staging_rows&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0 0 0 4px;line-height:1.6;&quot;&gt; operation_import_run_id: bigint unsigned&lt;br/&gt; line_number: int unsigned&lt;br/&gt; row_payload: json&lt;br/&gt; status: varchar(255)&lt;br/&gt; error_message: text&lt;br/&gt; processed_at: timestamp&lt;br/&gt; created_at: timestamp&lt;br/&gt; updated_at: timestamp&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0 0 0 4px;line-height:1.6;&quot;&gt; id: bigint unsigned&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=14;fontFamily=Helvetica;html=1;rounded=0;shadow=0;comic=0;labelBackgroundColor=none;strokeWidth=1;">
+      <mxGeometry x="177" y="2092" width="287" height="256" as="geometry" />
+    </mxCell>
+    <mxCell id="node16" parent="1" vertex="1" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;operation_status_histories&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0 0 0 4px;line-height:1.6;&quot;&gt; operation_id: bigint unsigned&lt;br/&gt; previous_status: varchar(30)&lt;br/&gt; new_status: varchar(30)&lt;br/&gt; changed_by_user_id: bigint unsigned&lt;br/&gt; notes: text&lt;br/&gt; changed_at: timestamp&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0 0 0 4px;line-height:1.6;&quot;&gt; id: bigint unsigned&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=14;fontFamily=Helvetica;html=1;rounded=0;shadow=0;comic=0;labelBackgroundColor=none;strokeWidth=1;">
+      <mxGeometry x="209" y="1456" width="262" height="208" as="geometry" />
+    </mxCell>
+    <mxCell id="node5" parent="1" vertex="1" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;operations&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0 0 0 4px;line-height:1.6;&quot;&gt; client_id: bigint unsigned&lt;br/&gt; agreement_id: bigint unsigned&lt;br/&gt; requested_value: decimal(15,2)&lt;br/&gt; disbursement_value: decimal(15,2)&lt;br/&gt; total_interest: decimal(15,2)&lt;br/&gt; late_fee_rate: decimal(5,2)&lt;br/&gt; late_interest_rate: decimal(5,2)&lt;br/&gt; installments_count: int&lt;br/&gt; paid_installments_count: int unsigned&lt;br/&gt; installment_value: decimal(15,2)&lt;br/&gt; status: varchar(30)&lt;br/&gt; product_type: varchar(20)&lt;br/&gt; first_due_date: date&lt;br/&gt; proposal_created_date: date&lt;br/&gt; payment_date: timestamp&lt;br/&gt; created_at: timestamp&lt;br/&gt; updated_at: timestamp&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0 0 0 4px;line-height:1.6;&quot;&gt; id: bigint unsigned&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=14;fontFamily=Helvetica;html=1;rounded=0;shadow=0;comic=0;labelBackgroundColor=none;strokeWidth=1;">
+      <mxGeometry x="345" y="504" width="270" height="472" as="geometry" />
+    </mxCell>
+    <mxCell id="node9" parent="1" vertex="1" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;password_reset_tokens&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0 0 0 4px;line-height:1.6;&quot;&gt; token: varchar(255)&lt;br/&gt; created_at: timestamp&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0 0 0 4px;line-height:1.6;&quot;&gt; email: varchar(255)&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=14;fontFamily=Helvetica;html=1;rounded=0;shadow=0;comic=0;labelBackgroundColor=none;strokeWidth=1;">
+      <mxGeometry x="287" y="44" width="226" height="121" as="geometry" />
+    </mxCell>
+    <mxCell id="node3" parent="1" vertex="1" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;sessions&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0 0 0 4px;line-height:1.6;&quot;&gt; user_id: bigint unsigned&lt;br/&gt; ip_address: varchar(45)&lt;br/&gt; user_agent: text&lt;br/&gt; payload: longtext&lt;br/&gt; last_activity: int&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0 0 0 4px;line-height:1.6;&quot;&gt; id: varchar(255)&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=14;fontFamily=Helvetica;html=1;rounded=0;shadow=0;comic=0;labelBackgroundColor=none;strokeWidth=1;">
+      <mxGeometry x="71" y="1108" width="178" height="184" as="geometry" />
+    </mxCell>
+    <mxCell id="node17" parent="1" vertex="1" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;users&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0 0 0 4px;line-height:1.6;&quot;&gt; name: varchar(255)&lt;br/&gt; email: varchar(255)&lt;br/&gt; username: varchar(50)&lt;br/&gt; password: varchar(255)&lt;br/&gt; created_at: timestamp&lt;br/&gt; updated_at: timestamp&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0 0 0 4px;line-height:1.6;&quot;&gt; id: bigint unsigned&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=14;fontFamily=Helvetica;html=1;rounded=0;shadow=0;comic=0;labelBackgroundColor=none;strokeWidth=1;">
+      <mxGeometry x="91" y="256" width="178" height="208" as="geometry" />
+    </mxCell>
+    <mxCell id="edge0" edge="1" value="" parent="1" source="node13" target="node5" style="html=1;rounded=1;edgeStyle=orthogonalEdgeStyle;dashed=0;startArrow=none;endArrow=block;endSize=12;strokeColor=#595959;exitX=0.750;exitY=0.000;exitDx=0;exitDy=0;entryX=0.500;entryY=1.000;entryDx=0;entryDy=0;">
+      <mxGeometry width="50" height="50" relative="1" as="geometry">
+        <Array as="points">
+          <mxPoint x="599" y="1040" />
+          <mxPoint x="480" y="1040" />
+        </Array>
+      </mxGeometry>
+    </mxCell>
+    <mxCell id="label2" parent="edge0" vertex="1" connectable="0" value="operation_id:id" style="edgeLabel;resizable=0;html=1;align=left;verticalAlign=top;strokeColor=default;">
+      <mxGeometry x="513" y="1030" as="geometry" />
+    </mxCell>
+    <mxCell id="edge7" edge="1" value="" parent="1" source="node13" target="node17" style="html=1;rounded=1;edgeStyle=orthogonalEdgeStyle;dashed=0;startArrow=none;endArrow=block;endSize=12;strokeColor=#595959;exitX=0.250;exitY=0.000;exitDx=0;exitDy=0;entryX=0.875;entryY=1.000;entryDx=0;entryDy=0;">
+      <mxGeometry width="50" height="50" relative="1" as="geometry">
+        <Array as="points">
+          <mxPoint x="482" y="1020" />
+          <mxPoint x="247" y="1020" />
+        </Array>
+      </mxGeometry>
+    </mxCell>
+    <mxCell id="label44" parent="edge7" vertex="1" connectable="0" value="paid_by_user_id:id" style="edgeLabel;resizable=0;html=1;align=left;verticalAlign=top;strokeColor=default;">
+      <mxGeometry x="312" y="1000" as="geometry" />
+    </mxCell>
+    <mxCell id="edge3" edge="1" value="" parent="1" source="node14" target="node6" style="html=1;rounded=1;edgeStyle=orthogonalEdgeStyle;dashed=0;startArrow=none;endArrow=block;endSize=12;strokeColor=#595959;exitX=0.500;exitY=0.000;exitDx=0;exitDy=0;entryX=0.500;entryY=1.000;entryDx=0;entryDy=0;">
+      <mxGeometry width="50" height="50" relative="1" as="geometry">
+        <Array as="points" />
+      </mxGeometry>
+    </mxCell>
+    <mxCell id="label20" parent="edge3" vertex="1" connectable="0" value="operation_import_run_id:id" style="edgeLabel;resizable=0;html=1;align=left;verticalAlign=top;strokeColor=default;">
+      <mxGeometry x="-152" y="1928" as="geometry" />
+    </mxCell>
+    <mxCell id="edge1" edge="1" value="" parent="1" source="node6" target="node17" style="html=1;rounded=1;edgeStyle=orthogonalEdgeStyle;dashed=0;startArrow=none;endArrow=block;endSize=12;strokeColor=#595959;exitX=0.500;exitY=0.000;exitDx=0;exitDy=0;entryX=0.125;entryY=1.000;entryDx=0;entryDy=0;">
+      <mxGeometry width="50" height="50" relative="1" as="geometry">
+        <Array as="points">
+          <mxPoint x="0" y="1080" />
+          <mxPoint x="113" y="1080" />
+        </Array>
+      </mxGeometry>
+    </mxCell>
+    <mxCell id="label8" parent="edge1" vertex="1" connectable="0" value="requested_by_user_id:id" style="edgeLabel;resizable=0;html=1;align=left;verticalAlign=top;strokeColor=default;">
+      <mxGeometry x="-137" y="1098" as="geometry" />
+    </mxCell>
+    <mxCell id="edge5" edge="1" value="" parent="1" source="node8" target="node6" style="html=1;rounded=1;edgeStyle=orthogonalEdgeStyle;dashed=0;startArrow=none;endArrow=block;endSize=12;strokeColor=#595959;exitX=0.500;exitY=0.000;exitDx=0;exitDy=0;entryX=0.500;entryY=1.000;entryDx=0;entryDy=0;">
+      <mxGeometry width="50" height="50" relative="1" as="geometry">
+        <Array as="points">
+          <mxPoint x="320" y="1820" />
+          <mxPoint x="0" y="1820" />
+        </Array>
+      </mxGeometry>
+    </mxCell>
+    <mxCell id="label32" parent="edge5" vertex="1" connectable="0" value="operation_import_run_id:id" style="edgeLabel;resizable=0;html=1;align=left;verticalAlign=top;strokeColor=default;">
+      <mxGeometry x="168" y="1810" as="geometry" />
+    </mxCell>
+    <mxCell id="edge9" edge="1" value="" parent="1" source="node16" target="node5" style="html=1;rounded=1;edgeStyle=orthogonalEdgeStyle;dashed=0;startArrow=none;endArrow=block;endSize=12;strokeColor=#595959;exitX=0.750;exitY=0.000;exitDx=0;exitDy=0;entryX=0.500;entryY=1.000;entryDx=0;entryDy=0;">
+      <mxGeometry width="50" height="50" relative="1" as="geometry">
+        <Array as="points">
+          <mxPoint x="406" y="1040" />
+          <mxPoint x="480" y="1040" />
+        </Array>
+      </mxGeometry>
+    </mxCell>
+    <mxCell id="label56" parent="edge9" vertex="1" connectable="0" value="operation_id:id" style="edgeLabel;resizable=0;html=1;align=left;verticalAlign=top;strokeColor=default;">
+      <mxGeometry x="320" y="1113" as="geometry" />
+    </mxCell>
+    <mxCell id="edge6" edge="1" value="" parent="1" source="node16" target="node17" style="html=1;rounded=1;edgeStyle=orthogonalEdgeStyle;dashed=0;startArrow=none;endArrow=block;endSize=12;strokeColor=#595959;exitX=0.250;exitY=0.000;exitDx=0;exitDy=0;entryX=0.625;entryY=1.000;entryDx=0;entryDy=0;">
+      <mxGeometry width="50" height="50" relative="1" as="geometry">
+        <Array as="points">
+          <mxPoint x="275" y="1080" />
+          <mxPoint x="202" y="1080" />
+        </Array>
+      </mxGeometry>
+    </mxCell>
+    <mxCell id="label38" parent="edge6" vertex="1" connectable="0" value="changed_by_user_id:id" style="edgeLabel;resizable=0;html=1;align=left;verticalAlign=top;strokeColor=default;">
+      <mxGeometry x="211" y="1060" as="geometry" />
+    </mxCell>
+    <mxCell id="edge8" edge="1" value="" parent="1" source="node5" target="node15" style="html=1;rounded=1;edgeStyle=orthogonalEdgeStyle;dashed=0;startArrow=none;endArrow=block;endSize=12;strokeColor=#595959;exitX=0.250;exitY=0.000;exitDx=0;exitDy=0;entryX=0.500;entryY=1.000;entryDx=0;entryDy=0;">
+      <mxGeometry width="50" height="50" relative="1" as="geometry">
+        <Array as="points">
+          <mxPoint x="413" y="240" />
+          <mxPoint x="140" y="240" />
+        </Array>
+      </mxGeometry>
+    </mxCell>
+    <mxCell id="label50" parent="edge8" vertex="1" connectable="0" value="agreement_id:id" style="edgeLabel;resizable=0;html=1;align=left;verticalAlign=top;strokeColor=default;">
+      <mxGeometry x="229" y="220" as="geometry" />
+    </mxCell>
+    <mxCell id="edge4" edge="1" value="" parent="1" source="node5" target="node4" style="html=1;rounded=1;edgeStyle=orthogonalEdgeStyle;dashed=0;startArrow=none;endArrow=block;endSize=12;strokeColor=#595959;exitX=0.750;exitY=0.000;exitDx=0;exitDy=0;entryX=0.500;entryY=1.000;entryDx=0;entryDy=0;">
+      <mxGeometry width="50" height="50" relative="1" as="geometry">
+        <Array as="points">
+          <mxPoint x="548" y="480" />
+          <mxPoint x="540" y="480" />
+        </Array>
+      </mxGeometry>
+    </mxCell>
+    <mxCell id="label26" parent="edge4" vertex="1" connectable="0" value="client_id:id" style="edgeLabel;resizable=0;html=1;align=left;verticalAlign=top;strokeColor=default;">
+      <mxGeometry x="486" y="482" as="geometry" />
+    </mxCell>
+    <mxCell id="edge2" edge="1" value="" parent="1" source="node3" target="node17" style="html=1;rounded=1;edgeStyle=orthogonalEdgeStyle;dashed=0;startArrow=none;endArrow=block;endSize=12;strokeColor=#595959;exitX=0.500;exitY=0.000;exitDx=0;exitDy=0;entryX=0.375;entryY=1.000;entryDx=0;entryDy=0;">
+      <mxGeometry width="50" height="50" relative="1" as="geometry">
+        <Array as="points">
+          <mxPoint x="160" y="1080" />
+          <mxPoint x="158" y="1080" />
+        </Array>
+      </mxGeometry>
+    </mxCell>
+    <mxCell id="label14" parent="edge2" vertex="1" connectable="0" value="user_id:id" style="edgeLabel;resizable=0;html=1;align=left;verticalAlign=top;strokeColor=default;">
+      <mxGeometry x="103" y="1084" as="geometry" />
+    </mxCell>
+  </root>
+</mxGraphModel>

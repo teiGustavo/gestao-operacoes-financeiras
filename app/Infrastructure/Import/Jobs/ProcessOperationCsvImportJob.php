@@ -63,7 +63,7 @@ final class ProcessOperationCsvImportJob implements ShouldBeUnique, ShouldQueue
 
             $chunkPlan = $operationCsvImporter->buildChunkPlan(
                 filePath: $operationImportRun->file_path,
-                workerCount: $this->resolveParallelWorkers(),
+                chunkSize: (int) config('imports.chunk_size', 2_000),
             );
             $totalRows = $chunkPlan['total_rows'];
 
